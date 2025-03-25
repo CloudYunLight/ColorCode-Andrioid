@@ -22,7 +22,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
 
     companion object {
         private const val TAG = "VideoHandler"
-        private val TARGET_ASPECT_RATIO = AspectRatio.RATIO_4_3 // 4:3 比例
+        private val TARGET_ASPECT_RATIO = AspectRatio.RATIO_16_9 // 4:3 比例
     }
 
     /**
@@ -37,7 +37,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
 
             // 设置预览
             val preview = Preview.Builder()
-                .setTargetAspectRatio(TARGET_ASPECT_RATIO) // 设置预览比例为 4:3
+                .setTargetAspectRatio(TARGET_ASPECT_RATIO) // 设置预览比例为 16:9
                 .build()
                 .also {
                     it.setSurfaceProvider(previewView.surfaceProvider)
