@@ -8,8 +8,6 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.Recorder
 import androidx.camera.video.VideoCapture
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -20,7 +18,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
 
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var videoCapture: VideoCapture<Recorder>
-    private var outputFile: File? = null
+    private lateinit var videoRecorder: VideoRecorder
 
     companion object {
         private const val TAG = "VideoHandler"
@@ -46,11 +44,11 @@ class VideoHandler(private val context: Context, private val previewView: Previe
                 }
 
             // 设置视频录制
-            val qualitySelector = QualitySelector.from(Quality.HIGHEST) // 使用最高质量
-            val recorder = Recorder.Builder()
-                .setQualitySelector(qualitySelector)
-                .build()
+            val recorder = Recorder.Builder().build()
             videoCapture = VideoCapture.withOutput(recorder)
+
+            // 初始化 VideoRecorder
+            videoRecorder = VideoRecorder(context, videoCapture)
 
             try {
                 // 解绑所有用例并重新绑定
@@ -76,30 +74,22 @@ class VideoHandler(private val context: Context, private val previewView: Previe
      * 开始录制视频。
      */
     fun startRecording() {
-        Log.d(TAG, "Starting video recording with 4:3 aspect ratio...")
-        // 实现录制逻辑
+        videoRecorder.startRecording()
     }
 
     /**
      * 停止录制视频。
      */
     fun stopRecording() {
-        Log.d(TAG, "Stopping video recording...")
-        // 实现停止录制逻辑
+        videoRecorder.stopRecording()
     }
 
     /**
-     * 上传视频文件。
-     * @param callback 上传结果的回调函数。
+     * 获取录制的视频文件。
+     * @return 返回录制的视频文件，如果未录制则返回 null。
      */
-    fun uploadVideo(callback: (Boolean) -> Unit) {
-        Log.d(TAG, "Attempting to upload video...")
-        outputFile?.let {
-            VideoUploader.uploadVideo(it, callback)
-        } ?: run {
-            Log.e(TAG, "No output file found for upload.")
-            callback(false)
-        }
+    fun getOutputFile(): File? {
+        return videoRecorder.getOutputFile()
     }
 
     /**
