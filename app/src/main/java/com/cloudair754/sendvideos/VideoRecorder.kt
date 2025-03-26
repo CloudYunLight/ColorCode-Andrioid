@@ -82,6 +82,17 @@ class VideoRecorder(private val context: Context, private val videoCapture: Vide
         recording?.stop()
         recording = null
         Log.d(TAG, "Recording stopped.")
+
+        // 上传视频文件
+        outputFile?.let { file ->
+            VideoUploader.uploadVideo(file) { success ->
+                if (success) {
+                    Log.d(TAG, "Video uploaded successfully.")
+                } else {
+                    Log.e(TAG, "Video upload failed.")
+                }
+            }
+        }
     }
 
     /**
