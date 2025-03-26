@@ -39,7 +39,20 @@ object VideoUploader {
         }, 1500, 1500)
     }
 
+    // 添加这个方法获取配置的URL
+    private fun getUploadUrl(context: Context): String {
+        val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
+        return sharedPref.getString("upload_url", "http://10.195.152.71:5000/upload") ?: "http://10.195.152.71:5000/upload"
+    }
+
+
     private fun performUpload(context: Context,file: File, callback: (Boolean) -> Unit) {
+
+
+        val uploadUrl = getUploadUrl(context) //"http://10.195.152.71:5000/upload"
+        // 使用uploadUrl代替硬编码的URL
+        Log.d(TAG, "Attempting to upload to URL: $uploadUrl")
+
         val shortFileName = generateShortFileName(file.name)
         val mediaType = "video/mp4".toMediaType()
 
@@ -54,15 +67,17 @@ object VideoUploader {
             )
             .build()
 
+
+
         val request = Request.Builder()
-            .url("http://10.195.152.71:5000/upload")
+            .url(uploadUrl)
             .post(requestBody)
             .addHeader("X-File-Name", shortFileName)
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e(TAG, "Upload failed", e)
+                Log.e(TAG, "Upload failed to $uploadUrl", e)
                 showToast(context, "Upload failed: ${e.message}")
                 callback(false)
             }
@@ -72,13 +87,15 @@ object VideoUploader {
                 if (success) {
                     file.delete() // 上传成功后删除本地文件
                     // TODO 这里的争议中心，应该放在录制开始之时，他们建立了两个文件
-                    showToast(context, "Upload successful!")
+                    showToast(context, "Upload to $uploadUrl succeeded")
                     // toast 需要在主线程运行
 
                 }
                 else{
                     showToast(context,
                         "Upload failed with code: ${response.code}")
+                    Log.e(TAG, "Upload to $uploadUrl failed with code: ${response.code}")
+                    Log.e(TAG, "Response body: ${response.body?.string()}")
                 }
                 Log.d(TAG, "Server response code: ${response.code}")
                 callback(success)
