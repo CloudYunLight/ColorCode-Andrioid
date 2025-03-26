@@ -1,6 +1,7 @@
 package com.cloudair754.sendvideos
 
 import android.util.Log
+import android.widget.Toast
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -9,14 +10,20 @@ import java.io.IOException
 import java.util.Timer
 import java.util.TimerTask
 import java.util.UUID
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+
 
 object VideoUploader {
 
     private const val TAG = "VideoUploader"
     private val client = OkHttpClient()
 
-    fun uploadVideo(file: File, callback: (Boolean) -> Unit) {
+
+    fun uploadVideo(context: Context , file: File, callback: (Boolean) -> Unit) {
         Log.d(TAG, "Attempting to upload file: ${file.name}")
+        showToast(context, "Preparing to upload video...")
 
         val shortFileName = generateShortFileName(file.name)
         Log.d(TAG, "Original: ${file.name}, Short: $shortFileName")
@@ -26,13 +33,13 @@ object VideoUploader {
             override fun run() {
                 if (file.renameTo(file)) {
                     timer.cancel()
-                    performUpload(file, callback)
+                    performUpload(context,file, callback)
                 }
             }
         }, 1500, 1500)
     }
 
-    private fun performUpload(file: File, callback: (Boolean) -> Unit) {
+    private fun performUpload(context: Context,file: File, callback: (Boolean) -> Unit) {
         val shortFileName = generateShortFileName(file.name)
         val mediaType = "video/mp4".toMediaType()
 
@@ -48,7 +55,7 @@ object VideoUploader {
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.207.9:5000/upload")
+            .url("http://10.195.152.71:5000/upload")
             .post(requestBody)
             .addHeader("X-File-Name", shortFileName)
             .build()
@@ -56,18 +63,35 @@ object VideoUploader {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Upload failed", e)
+                showToast(context, "Upload failed: ${e.message}")
                 callback(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
+                val success = response.isSuccessful
+                if (success) {
+                    file.delete() // 上传成功后删除本地文件
+                    // TODO 这里的争议中心，应该放在录制开始之时，他们建立了两个文件
+                    showToast(context, "Upload successful!")
+                    // toast 需要在主线程运行
 
-
-
-
+                }
+                else{
+                    showToast(context,
+                        "Upload failed with code: ${response.code}")
+                }
                 Log.d(TAG, "Server response code: ${response.code}")
-                callback(response.isSuccessful)
+                callback(success)
+
             }
         })
+    }
+
+    // 确保 Toast 在主线程显示
+    private fun showToast(context: Context, message: String) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     fun generateShortFileName(originalName: String): String {

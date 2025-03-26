@@ -85,7 +85,7 @@ class VideoRecorder(private val context: Context, private val videoCapture: Vide
 
         // 上传视频文件
         outputFile?.let { file ->
-            VideoUploader.uploadVideo(file) { success ->
+            VideoUploader.uploadVideo(context,file) { success ->
                 if (success) {
                     Log.d(TAG, "Video uploaded successfully.")
                 } else {
@@ -135,6 +135,8 @@ class VideoRecorder(private val context: Context, private val videoCapture: Vide
                 outputStream?.use { os ->
                     file.inputStream().use { it.copyTo(os) }
                 }
+                val videoURi = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                Log.i(TAG,"Root Path:$videoURi")
                 Log.d(TAG, "Video added to MediaStore: $uri")
             } else {
                 Log.e(TAG, "Failed to insert video into MediaStore")
