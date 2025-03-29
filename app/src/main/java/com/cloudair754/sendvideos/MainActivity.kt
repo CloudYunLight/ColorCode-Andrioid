@@ -3,6 +3,7 @@ package com.cloudair754.sendvideos
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +15,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var videoHandler: VideoHandler
+    private lateinit var networkStatusChecker: NetworkStatusChecker
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -29,6 +31,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 初始化网络状态检查器
+
+        networkStatusChecker = NetworkStatusChecker(this) { drawableRes, statusText ->
+            runOnUiThread {
+                val drawable: Drawable? = ContextCompat.getDrawable(this, drawableRes)
+                binding.networkStatusIndicator.background = drawable
+                binding.networkStatusText.text = statusText
+            }
+        }
 
         videoHandler = VideoHandler(this, binding.previewView)
 
@@ -60,6 +72,18 @@ class MainActivity : AppCompatActivity() {
             configLauncher.launch(intent)
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        networkStatusChecker.startChecking()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        networkStatusChecker.stopChecking()
+    }
+
+
 
     override fun onDestroy() {
         super.onDestroy()
