@@ -9,11 +9,20 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET" /><!-- 网络访问权限 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-
+    <!-- 允许明文HTTP流量 -->
+    <!-- 请求旧版存储访问方式 -->
+    <!-- 允许应用备份 -->
+    <!-- 数据提取规则 -->
+    <!-- 完整备份内容规则 -->
+    <!-- 应用图标 -->
+    <!-- 应用名称 -->
+    <!-- 支持从右到左布局 -->
+    <!-- 应用主题 -->
+    <!-- 目标API级别 -->
     <application
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
@@ -25,16 +34,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SendVideos"
-        tools:targetApi="31">
+        tools:targetApi="35">
         <activity
             android:name=".MainActivity"
             android:exported="true">
+            <!-- 允许其他应用启动此Activity -->
             <intent-filter>
+                <!-- 声明这是主入口点 -->
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 配置Activity -->
+        <!-- 不允许其他应用启动此Activity -->
         <activity
             android:name=".ConfigActivity"
             android:exported="false" />
