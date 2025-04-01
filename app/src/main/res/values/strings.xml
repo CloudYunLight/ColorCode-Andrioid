@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">SendVideos</string>
+    <string name="upload_server_url_config">Upload Server URL</string>
+    <string name="enter_upload_url_config">Enter upload URL</string>
+    <string name="version_info_config_placeholder">Version Info</string>
+    <string name="save_config">Save</string>
+    <string name="back_config">Back</string>
 </resources>
