@@ -1,10 +1,12 @@
 package com.cloudair754.sendvideos
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -26,7 +28,8 @@ class MainActivity : AppCompatActivity() {
         } else {
 
             // 处理权限被拒绝的情况（可添加更友好的提示）
-            Toast.makeText(this, "需要相机（？只有这个吗）权限才能使用此功能", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "需要相机（？只有这个吗）权限才能使用此功能", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -56,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(
                 this, Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
-            ) {
+        ) {
             // 已有权限，直接启动相机
             videoHandler.startCamera()
         } else {
@@ -74,18 +77,53 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 配置Activity结果处理启动器
-        val configLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                // URL可能已更新，可以在这里处理
-                Toast.makeText(this, "URL updated", Toast.LENGTH_SHORT).show()
+        val configLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    // URL可能已更新，可以在这里处理
+                    Toast.makeText(this, "URL updated", Toast.LENGTH_SHORT).show()
+                }
             }
-        }
 
         // 在onCreate方法中添加配置按钮
         binding.configButton.setOnClickListener {
             val intent = Intent(this, ConfigActivity::class.java)
             configLauncher.launch(intent)
         }
+
+        // 在onCreate方法中
+        binding.zoomSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            @SuppressLint("SetTextI18n")
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+
+                // 使用增强版缩放控制
+                val zoomValue = videoHandler.setEnhancedZoom(progress)
+
+                // 更新显示
+                binding.zoomValueText.text = "%.1fx".format(zoomValue)
+
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                // 触摸开始时添加视觉反馈
+                binding.zoomControlContainer.background =
+                    ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_zoom_active)
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                // 触摸结束时恢复背景
+                binding.zoomControlContainer.background =
+                    ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_zoom_normal)
+            }
+        })
+
+        // 初始化时设置合理的范围
+        val (minZoom, maxZoom) = videoHandler.getZoomRange()
+        binding.zoomSeekBar.max = 200
+        binding.zoomSeekBar.progress = 0  // 默认居左
+
+
     }
 
     override fun onResume() {
@@ -99,7 +137,6 @@ class MainActivity : AppCompatActivity() {
         // Activity暂停时停止检查网络状态
         networkStatusChecker.stopChecking()
     }
-
 
 
     override fun onDestroy() {
