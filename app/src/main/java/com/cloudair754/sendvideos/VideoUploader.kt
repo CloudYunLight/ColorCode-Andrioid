@@ -105,6 +105,14 @@ object VideoUploader {
                 // 上传失败处理
                 Log.e(TAG, "Upload failed to $uploadUrl", e)
                 showToast(context, "上传失败: ${e.message}")
+
+                // 无论成功或失败都删除MOVIES文件夹下的视频
+                if (file.exists()) {
+                    file.delete()
+                    Log.d(TAG, "Deleted MOVIES folder video after failed upload")
+                }
+
+
                 callback(false)
             }
 
@@ -112,7 +120,11 @@ object VideoUploader {
                 val success = response.isSuccessful
                 if (success) {
                     // 上传成功处理
-                    file.delete() // 上传成功后删除本地文件
+                    // 上传成功处理
+                    if (file.exists()) {
+                        file.delete()
+                        Log.d(TAG, "Deleted MOVIES folder video after successful upload")
+                    }
 
                     showToast(context, "上传成功: $uploadUrl ")
                     // toast 需要在主线程运行
