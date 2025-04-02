@@ -51,8 +51,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 初始化视频处理器
-        videoHandler = VideoHandler(this, binding.previewView)
+        // 初始化视频处理器后设置监听器
+        videoHandler = VideoHandler(this, binding.previewView).apply {
+            setRecordingStateListener(object : VideoHandler.RecordingStateListener {
+                override fun onRecordingStarted() {
+                    runOnUiThread {
+                        binding.recordButton.isEnabled = false
+                        binding.stopButton.isEnabled = true
+                    }
+                }
+
+                override fun onRecordingStopped() {
+                    runOnUiThread {
+                        binding.recordButton.isEnabled = true
+                        binding.stopButton.isEnabled = false
+                    }
+                }
+            })
+        }
+        // 初始状态设置
+        binding.recordButton.isEnabled = true
+        binding.stopButton.isEnabled = false
+
 
 
         // 检查相机权限

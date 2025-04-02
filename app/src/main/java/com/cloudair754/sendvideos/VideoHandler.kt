@@ -27,6 +27,19 @@ import java.util.concurrent.Executors
  */
 class VideoHandler(private val context: Context, private val previewView: PreviewView) {
 
+    // 添加录制状态监听器接口
+    interface RecordingStateListener {
+        fun onRecordingStarted()
+        fun onRecordingStopped()
+    }
+
+    private var recordingStateListener: RecordingStateListener? = null
+
+    // 设置监听器的方法
+    fun setRecordingStateListener(listener: RecordingStateListener) {
+        this.recordingStateListener = listener
+    }
+
     // 相机操作执行器（单线程）
     private lateinit var cameraExecutor: ExecutorService
 
@@ -163,6 +176,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
     fun startRecording() {
         // 将视频流权限都给videoRecoder 类去处理
         videoRecorder.startRecording()
+        recordingStateListener?.onRecordingStarted()
     }
 
     /**
@@ -170,6 +184,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
      */
     fun stopRecording() {
         videoRecorder.stopRecording()
+        recordingStateListener?.onRecordingStopped()
     }
 
 
