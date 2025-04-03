@@ -4,8 +4,12 @@ package com.cloudair754.sendvideos
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.cloudair754.sendvideos.databinding.ActivityConfigBinding
+import java.io.File
 
 class ConfigActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConfigBinding
@@ -33,8 +37,64 @@ class ConfigActivity : AppCompatActivity() {
         binding.backButton.setOnClickListener {
             finish()
         }
+
+        binding.cleanButton.setOnClickListener {
+            cleanColorCodeDirectory()
+        }
+
+
     }
 
+    /**
+     * 清理MOVIES/ColorCode目录下的所有文件
+     * TODO 可提速的点位欸
+     */
+    private fun cleanColorCodeDirectory() {
+        try {
+            // 获取ColorCode目录
+            val colorCodeDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                "ColorCode"
+            )
+
+            // 检查目录是否存在
+            if (!colorCodeDir.exists() || !colorCodeDir.isDirectory) {
+                Toast.makeText(this, getString(R.string.no_files), Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // 删除目录下所有文件
+            val files = colorCodeDir.listFiles()
+            if (files.isNullOrEmpty()) {
+                Toast.makeText(this, getString(R.string.no_files), Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            var deletedCount = 0
+            files.forEach { file ->
+                if (file.delete()) {
+                    deletedCount++
+                }
+            }
+
+            // 显示清理结果
+            val message = if (deletedCount > 0) {
+                getString(R.string.clean_success, deletedCount)
+            } else {
+                getString(R.string.no_files)
+            }
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "清理文件失败", e)
+            Toast.makeText(this, R.string.clean_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    companion object {
+        private const val TAG = "ConfigActivity"
+    }
 
     /**
      * 保存URL并返回

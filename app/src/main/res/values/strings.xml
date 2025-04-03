@@ -5,4 +5,9 @@
     <string name="version_info_config_placeholder">Version Info</string>
     <string name="save_config">Save</string>
     <string name="back_config">Back</string>
+
+    <string name="clean_files">清理临时视频文件</string>
+    <string name="clean_success">已清理 %d 个文件</string>
+    <string name="clean_failed">清理失败</string>
+    <string name="no_files">没有可清理的文件</string>
 </resources>
