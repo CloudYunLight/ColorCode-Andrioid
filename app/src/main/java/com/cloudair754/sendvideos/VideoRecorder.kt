@@ -153,22 +153,25 @@ class VideoRecorder(
      */
     // TODO 尝试使用协程以加快速度
     private fun createVideoFile(): File? {
-
-
         // 获取公共视频目录[./0/MOVIES]
         val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-        if (!storageDir.exists()) {
-            storageDir.mkdirs() // 如果目录不存在，则创建
+
+        // 创建ColorCode子目录
+        val yzrDir = File(storageDir, "ColorCode")
+        if (!yzrDir.exists()) {
+            if (!yzrDir.mkdirs()) {
+                Log.e(TAG, "Failed to create ColorCode directory")
+                showToast("无法创建ColorCode目录")
+                return null
+            }
         }
 
         // 生成带时间戳的文件名
-
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "[yzr]CQR_${timeStamp}.mp4"
 
-        return File(storageDir, fileName).also {
+        return File(yzrDir, fileName).also {
             Log.d(TAG, "Video file created: ${it.absolutePath}")
-            // 提示用户文件存储位置
             showToast("视频文件已创建，存储位置：${it.absolutePath}")
         }
     }
