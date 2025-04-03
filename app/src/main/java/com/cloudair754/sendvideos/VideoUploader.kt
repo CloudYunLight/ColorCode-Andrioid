@@ -24,6 +24,12 @@ import android.os.Looper
  */
 object VideoUploader {
 
+    private var networkChecker: NetworkStatusChecker? = null
+
+    fun setNetworkChecker(checker: NetworkStatusChecker) {
+        this.networkChecker = checker
+    }
+
     private const val TAG = "VideoUploader"
     private val client = OkHttpClient()// OkHttp客户端实例
 
@@ -34,6 +40,15 @@ object VideoUploader {
      * @param callback 上传结果回调（成功/失败）
      */
     fun uploadVideo(context: Context, file: File, callback: (Boolean) -> Unit) {
+
+        // 检查网络状态
+        networkChecker?.let { checker ->
+            if (checker.currentNetworkQuality == NetworkStatusChecker.NetworkQuality.POOR) {
+                showToast(context, "网络质量差，已取消上传")
+                callback(false)
+                return
+            }
+        }
         Log.d(TAG, "Attempting to upload file: ${file.name}")
         showToast(context, "准备上传视频...")
 

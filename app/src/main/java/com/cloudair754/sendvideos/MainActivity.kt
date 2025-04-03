@@ -51,6 +51,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // 设置上传器的网络检查器
+        VideoUploader.setNetworkChecker(networkStatusChecker)
+
         // 初始化视频处理器后设置监听器
         videoHandler = VideoHandler(this, binding.previewView).apply {
             setRecordingStateListener(object : VideoHandler.RecordingStateListener {

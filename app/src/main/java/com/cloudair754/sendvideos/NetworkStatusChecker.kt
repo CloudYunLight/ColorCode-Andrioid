@@ -19,6 +19,19 @@ class NetworkStatusChecker(
     // 状态更新回调，参数：图标资源ID和状态文本
     private val updateStatus: (drawableRes: Int, statusText: String) -> Unit // 统一使用updateStatus
 ) {
+
+    enum class NetworkQuality {
+        GOOD, // 良好网络
+        FAIR, // 一般网络
+        POOR  // 差网络
+    }
+
+    // 添加网络质量状态属性
+    @Volatile
+    var currentNetworkQuality: NetworkQuality = NetworkQuality.POOR
+        private set
+
+
     // OkHttp客户端实例
     private val client = OkHttpClient()
 
@@ -55,8 +68,12 @@ class NetworkStatusChecker(
      */
     private fun checkNetworkStatus() {
         val savedUrl = sharedPref.getString("upload_url", "") ?: ""
+
+
+
         if (savedUrl.isEmpty()) {
             updateStatus(R.drawable.circle_red, "未设置服务器")
+            currentNetworkQuality = NetworkQuality.POOR
             return
         }
 
@@ -73,6 +90,7 @@ class NetworkStatusChecker(
 
             // 请求失败回调
             override fun onFailure(call: Call, e: IOException) {
+                currentNetworkQuality = NetworkQuality.POOR
                 updateStatus(R.drawable.circle_red, "连接失败")
             }
 
@@ -84,6 +102,12 @@ class NetworkStatusChecker(
                         val json = JSONObject(responseData)
                         val responseTime = json.getDouble("response_time")
                         val status = json.getString("status")
+
+                        currentNetworkQuality = when {
+                            status != "alive" -> NetworkQuality.POOR
+                            responseTime > 0.01 -> NetworkQuality.FAIR
+                            else -> NetworkQuality.GOOD
+                        }
 
                         when {
                             status != "alive" -> updateStatus(R.drawable.circle_red, "服务器异常")
@@ -98,9 +122,11 @@ class NetworkStatusChecker(
                             )
                         }
                     } else {
+                        currentNetworkQuality = NetworkQuality.POOR
                         updateStatus(R.drawable.circle_red, "服务器无响应")
                     }
                 } catch (e: Exception) {
+                    currentNetworkQuality = NetworkQuality.POOR
                     updateStatus(R.drawable.circle_red, "解析错误")
                 }
             }
