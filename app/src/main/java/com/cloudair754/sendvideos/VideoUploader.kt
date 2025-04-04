@@ -152,7 +152,7 @@ object VideoUploader {
      */
     private fun showToast(context: Context, message: String) {
         Handler(Looper.getMainLooper()).post {
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 

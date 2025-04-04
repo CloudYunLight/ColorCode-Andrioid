@@ -143,6 +143,15 @@ class VideoRecorder(
                     Log.e(TAG, "The video upload failed")
                 }
             }
+
+            FFmpegFrameExtractor.extractFramesToGallery(context, file) { frameSuccess, outputDir ->
+                if (frameSuccess) {
+                    Log.d(TAG, "Frames extracted successfully to $outputDir")
+                } else {
+                    Log.e(TAG, "Frame extraction failed")
+                }
+            }
+
         }
 
     }
