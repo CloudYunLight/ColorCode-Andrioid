@@ -81,6 +81,15 @@
         android:layout_marginTop="24dp"
         android:text="@string/clean_files" />
 
+    <!-- 在cleanButton下方添加 -->
+    <Button
+        android:id="@+id/cleanFramesButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/clean_frames" />
+
+
     <!-- 原有按钮保持不变 -->
     <Button
         android:id="@+id/saveButton"

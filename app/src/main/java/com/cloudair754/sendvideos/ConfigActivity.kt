@@ -5,11 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
+import android.text.Html
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.cloudair754.sendvideos.databinding.ActivityConfigBinding
 import java.io.File
+import androidx.appcompat.app.AlertDialog
+
 
 class ConfigActivity : AppCompatActivity() {
     private lateinit var binding: ActivityConfigBinding
@@ -47,10 +51,77 @@ class ConfigActivity : AppCompatActivity() {
         binding.cleanButton.setOnClickListener {
             cleanColorCodeDirectory()
         }
+        // 在onCreate方法中添加按钮点击监听
+        binding.cleanFramesButton.setOnClickListener {
+            showCleanFramesConfirmation()
+        }
 
 
     }
 
+    // 添加新方法
+    private fun showCleanFramesConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle(Html.fromHtml(getString((R.string.confirm_clean_frames_title))))
+            .setMessage(Html.fromHtml(getString((R.string.confirm_clean_frames_message))))
+            //.setTitle(getString(R.string.confirm_clean_frames))
+            .setPositiveButton(Html.fromHtml(getString((R.string.confirm_delete_button)))) { _, _ ->
+                cleanFramesAndMediaStore()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun cleanFramesAndMediaStore() {
+        try {
+            // 1. 清理Pictures目录下的帧图片
+            val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            val frameDirs = picturesDir.listFiles { file ->
+                file.isDirectory && file.name.startsWith("VideoFrames_")
+            }
+
+            var deletedCount = 0
+
+            frameDirs?.forEach { dir ->
+                // 删除目录下所有文件
+                dir.listFiles()?.forEach { file ->
+                    if (file.delete()) {
+                        deletedCount++
+                    }
+                }
+                // 删除空目录
+                dir.delete()
+
+                // 2. 从MediaStore中删除记录
+                deleteFromMediaStore(dir.name)
+            }
+
+            // 显示结果
+            val message = if (deletedCount > 0) {
+                getString(R.string.frames_clean_success, deletedCount)
+            } else {
+                getString(R.string.no_frames_found)
+            }
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+        } catch (e: Exception) {
+            Log.e(TAG, "清理帧图片失败", e)
+            Toast.makeText(this, R.string.clean_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun deleteFromMediaStore(albumName: String) {
+        val resolver = contentResolver
+        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} like ?"
+        val selectionArgs = arrayOf("%$albumName%")
+
+        try {
+            resolver.delete(uri, selection, selectionArgs)
+        } catch (e: Exception) {
+            Log.e(TAG, "从MediaStore删除失败", e)
+        }
+    }
 
 
     /**

@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.WRITE_MEDIA_IMAGES" />
+
     <!-- 允许明文HTTP流量 -->
     <!-- 请求旧版存储访问方式 -->
     <!-- 允许应用备份 -->

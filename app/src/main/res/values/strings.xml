@@ -11,4 +11,13 @@
     <string name="clean_failed">清理失败</string>
     <string name="no_files">没有可清理的文件</string>
     <string name="generate_frames_label">生成单独帧</string>
+
+    <string name="clean_frames">清理所有帧图片</string>
+    <string name="confirm_clean_frames">确定要删除所有生成的帧图片吗？</string>
+    <string name="frames_clean_success">已删除%d个帧图片</string>
+    <string name="no_frames_found">未找到可删除的帧图片</string>
+
+    <string name="confirm_clean_frames_title"><![CDATA[确认删除所有帧图片？]]></string>
+    <string name="confirm_clean_frames_message"><![CDATA[<font color="#FF0000">警告：此操作将永久删除所有生成的帧图片，且无法恢复！</font>]]></string>
+    <string name="confirm_delete_button"><![CDATA[<font color="#FF0000">我已知悉，永久删除</font>]]></string>
 </resources>
