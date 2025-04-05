@@ -10,4 +10,5 @@
     <string name="clean_success">已清理 %d 个文件</string>
     <string name="clean_failed">清理失败</string>
     <string name="no_files">没有可清理的文件</string>
+    <string name="generate_frames_label">生成单独帧</string>
 </resources>

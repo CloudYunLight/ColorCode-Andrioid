@@ -30,8 +30,14 @@ class ConfigActivity : AppCompatActivity() {
         val savedUrl = sharedPref.getString("upload_url", defaultUrl)
         binding.urlEditText.setText(savedUrl)
 
+
+        // 加载帧生成设置，默认为true
+        val generateFrames = sharedPref.getBoolean("generate_frames", true)
+        binding.frameGenerationSwitch.isChecked = generateFrames
+
+
         binding.saveButton.setOnClickListener {
-            saveUrlAndReturn()
+            saveSettingsAndReturn()
         }
 
         binding.backButton.setOnClickListener {
@@ -44,6 +50,8 @@ class ConfigActivity : AppCompatActivity() {
 
 
     }
+
+
 
     /**
      * 清理MOVIES/ColorCode目录下的所有文件
@@ -96,23 +104,21 @@ class ConfigActivity : AppCompatActivity() {
         private const val TAG = "ConfigActivity"
     }
 
-    /**
-     * 保存URL并返回
-     * 包含输入验证逻辑：
-     * 1. URL不能为空
-     * 2. URL必须以http://或https://开头
-     */
-    private fun saveUrlAndReturn() {
+    private fun saveSettingsAndReturn() {
         val url = binding.urlEditText.text.toString().trim()
+        val generateFrames = binding.frameGenerationSwitch.isChecked
+
         when {
             url.isEmpty() -> binding.urlEditText.error = "URL cannot be empty"
-            // 验证URL协议头
             !url.startsWith("http://") && !url.startsWith("https://") ->
                 binding.urlEditText.error = "URL must start with http:// or https://"
             else -> {
-                // 保存URL到共享偏好设置
-                sharedPref.edit().putString("upload_url", url).apply()
-                // 设置操作结果为成功
+                // 保存所有设置
+                sharedPref.edit()
+                    .putString("upload_url", url)
+                    .putBoolean("generate_frames", generateFrames)
+                    .apply()
+
                 setResult(RESULT_OK)
                 finish()
             }

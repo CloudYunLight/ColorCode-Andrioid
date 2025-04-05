@@ -144,11 +144,17 @@ class VideoRecorder(
                 }
             }
 
-            FFmpegFrameExtractor.extractFramesToGallery(context, file) { frameSuccess, outputDir ->
-                if (frameSuccess) {
-                    Log.d(TAG, "Frames extracted successfully to $outputDir")
-                } else {
-                    Log.e(TAG, "Frame extraction failed")
+            // 检查是否启用帧生成
+            val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
+            val generateFrames = sharedPref.getBoolean("generate_frames", true)
+
+            if (generateFrames) {
+                FFmpegFrameExtractor.extractFramesToGallery(context, file) { frameSuccess, outputDir ->
+                    if (frameSuccess) {
+                        Log.d(TAG, "Frames extracted successfully to $outputDir")
+                    } else {
+                        Log.e(TAG, "Frame extraction failed")
+                    }
                 }
             }
 

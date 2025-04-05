@@ -51,6 +51,27 @@
             android:textColor="@android:color/black"/>
     </ScrollView>
 
+    <!-- 在版本信息部分下方添加 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/generate_frames_label"
+            android:textSize="16sp"/>
+
+        <Switch
+            android:id="@+id/frameGenerationSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
 
     <!-- 在原有按钮上方添加清理按钮 -->
     <Button
