@@ -192,6 +192,8 @@ object FFmpegFrameExtractor {
                 context.contentResolver.openOutputStream(uri)?.use { os ->
                     file.inputStream().use { it.copyTo(os) }
                 }
+                // 删除原始文件(真好啊！！！)
+                file.delete()
                 // 完成写入后更新状态
                 contentValues.clear()
                 contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
