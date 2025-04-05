@@ -63,15 +63,13 @@ object FFmpegFrameExtractor {
     * 创建输出目录
     */
     private fun createOutputDirectory(context: Context, videoFile: File): File? {
-        // 获取视频拍摄日期（从文件名或最后修改时间）
-        val date = getVideoDate(videoFile)
-        val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val dateStr = dateFormat.format(date)
+        // 获取视频文件名（不含扩展名）
+        val videoName = videoFile.nameWithoutExtension
 
         // 创建相册目录
         val albumDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-            "VideoFrames_$dateStr"
+            "VideoFrames_$videoName"  // 使用视频文件名作为相册名
         )
 
         if (!albumDir.exists() && !albumDir.mkdirs()) {
@@ -81,7 +79,6 @@ object FFmpegFrameExtractor {
 
         return albumDir
     }
-
     /**
     * 从视频文件获取日期信息
     */
@@ -168,7 +165,7 @@ object FFmpegFrameExtractor {
     private fun addFramesToMediaStore(context: Context, outputDir: File) {
         outputDir.listFiles()?.forEach { file ->
             if (file.isFile && file.name.endsWith(".png")) {
-                addImageToMediaStore(context, file)
+                addImageToMediaStore(context, file, outputDir.name)
             }
         }
     }
@@ -176,13 +173,15 @@ object FFmpegFrameExtractor {
     /**
     * 将单张图片添加到媒体库
     */
-    private fun addImageToMediaStore(context: Context, file: File): Uri? {
+    private fun addImageToMediaStore(context: Context, file: File, albumName: String): Uri? {
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/VideoFrames")
+            // 使用相册名作为相对路径的一部分
+            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$albumName")
             put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
             put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
+            put(MediaStore.Images.Media.IS_PENDING, 1) // 标记为待处理
         }
 
         return try {
@@ -193,6 +192,10 @@ object FFmpegFrameExtractor {
                 context.contentResolver.openOutputStream(uri)?.use { os ->
                     file.inputStream().use { it.copyTo(os) }
                 }
+                // 完成写入后更新状态
+                contentValues.clear()
+                contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
+                context.contentResolver.update(uri, contentValues, null, null)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error adding image to MediaStore", e)
