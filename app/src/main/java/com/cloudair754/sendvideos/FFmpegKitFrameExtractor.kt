@@ -28,18 +28,22 @@ object FFmpegFrameExtractor {
     private const val FRAME_RATE = 30 // 默认帧率，实际应从视频元数据获取
     var PercentProgressFFMPG = 0.0
 
-    // 在类顶部添加
+    // 进度弹窗变量
     private var progressDialog: AlertDialog? = null
 
     // Android系统字体路径列表
     private val systemFonts = listOf(
         "/system/fonts/Roboto-Regular.ttf",
-        "/system/fonts/DroidSans.ttf",
-        "/system/fonts/NotoSans-Regular.ttf"
+        "/system/fonts/DroidSans.ttf",          // 低版本默认
+        "/system/fonts/NotoSans-Regular.ttf"    // 新版本默认
     )
 
-    // 拦截弹窗
+    /**
+     * 显示进度弹窗
+     * @param context 上下文对象
+     */
     private fun showProgressDialog(context: Context) {
+        // 在主线程中显示弹窗
         Handler(Looper.getMainLooper()).post {
             progressDialog = AlertDialog.Builder(context)
                 .setTitle("正在导出帧图片")
@@ -61,7 +65,7 @@ object FFmpegFrameExtractor {
         videoFile: File,
         callback: (success: Boolean, outputDir: File?) -> Unit
     ) {
-
+        // 检查文件是否可用（未被占用）
         if (!isFileReady(videoFile)) {
             Handler(Looper.getMainLooper()).postDelayed({
                 extractFramesToGallery(context, videoFile, callback)
@@ -71,6 +75,7 @@ object FFmpegFrameExtractor {
         showProgressDialog(context) // 拦截弹窗（阻止操作）
         // 1. 创建输出目录
         val outputDir = createOutputDirectory(context, videoFile) ?: run {
+            // 如果创建目录失败，回调失败状态
             callback(false, null)
             return
         }
@@ -85,12 +90,15 @@ object FFmpegFrameExtractor {
 
     /**
      * 创建输出目录
+     * @param context 上下文对象
+     * @param videoFile 视频文件
+     * @return 创建的目录File对象，失败返回null
      */
     private fun createOutputDirectory(context: Context, videoFile: File): File? {
         // 获取视频文件名（不含扩展名）
         val videoName = videoFile.nameWithoutExtension
 
-        // 创建相册目录
+        // 在系统相册目录下创建以视频文件名命名的子目录
         val albumDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
             "VideoFrames_$videoName"  // 使用视频文件名作为相册名
@@ -106,10 +114,15 @@ object FFmpegFrameExtractor {
 
 
     /**
-     * 构建FFmpeg命令
+     * 构建FFmpeg命令字符串
+     * @param videoFile 输入视频文件
+     * @param outputDir 输出目录
+     * @return FFmpeg命令字符串
      */
     private fun buildFFmpegCommand(videoFile: File, outputDir: File): String {
         val outputPattern = File(outputDir, "frame_%04d.png").absolutePath
+
+        // 查找可用的系统字体
         val fontPath = findAvailableFont() ?: run {
             Log.w(TAG, "No system font found, using default")
             ""
@@ -119,6 +132,19 @@ object FFmpegFrameExtractor {
 
         return if (fontPath.isNotEmpty()) {
             // 添加带外轮廓的水印（使用shadow效果模拟描边）
+            // TODO 并行优化
+
+            /*
+
+             // 添加硬件解码和线程优化
+    return "-hwaccel auto -threads 4 " +
+           "-i ${videoFile.absolutePath} " +
+           "-vf \"fps=30,scale=w='if(gt(iw,ih),1280,-2)':h='if(gt(iw,ih),-2,720)'\" " + // 限制分辨率
+           "-q:v 2 -preset ultrafast " + // 快速编码预设
+           "-pix_fmt yuv420p " + // 兼容性更好的像素格式
+           File(outputDir, "frame_%04d.jpg").absolutePath // 改用更高效的jpg格式
+
+             */
             "-i ${videoFile.absolutePath} " +
                     "-vf \"fps=30," +
                     "drawtext=fontfile=$fontPath:text='$videoName':x=10:y=h-th-40:" +
@@ -136,13 +162,21 @@ object FFmpegFrameExtractor {
         }
     }
 
+    /**
+     * 查找可用的系统字体
+     * @return 找到的字体路径，找不到返回null
+     */
     private fun findAvailableFont(): String? {
         return systemFonts.firstOrNull { File(it).exists() }
     }
 
     /**
-     * 执行FFmpeg命令
-     */
+    * 执行FFmpeg命令
+    * @param context 上下文对象
+    * @param command FFmpeg命令字符串
+    * @param outputDir 输出目录
+    * @param callback 处理完成回调
+    */
     private fun executeFFmpegCommand(
         context: Context,
         command: String, // 这里改为String类型
@@ -156,6 +190,7 @@ object FFmpegFrameExtractor {
         var currentFrame: Int = 0 // 存储当前处理的帧数
         var durationStringBuffer: String? = null // 用于缓存第一条Duration消息
 
+        // 定义执行函数（支持重试）
         fun attemptExecution() {
             // 延迟执行以确保文件完全释放
             Handler(Looper.getMainLooper()).postDelayed({
@@ -224,7 +259,11 @@ object FFmpegFrameExtractor {
     }
 
 
-    // 更健壮的持续时间解析方法
+    /**
+    * 将时间字符串转换为毫秒数
+    * @param durationStr 时间字符串（格式：HH:MM:SS.ss）
+    * @return 毫秒数
+    */
     private fun parseDurationToMs(durationStr: String): Long {
         return try {
             val parts = durationStr.split(":", ".")
@@ -246,7 +285,11 @@ object FFmpegFrameExtractor {
     }
 
 
-    // 添加文件状态检查方法
+    /**
+    * 检查文件是否可用（未被占用）
+    * @param file 要检查的文件
+    * @return 是否可用
+    */
     private fun isFileReady(file: File): Boolean {
         return try {
             file.renameTo(file) // 尝试重命名到自身，检查文件是否被锁定
@@ -258,8 +301,11 @@ object FFmpegFrameExtractor {
 
 
     /**
-     * 将帧图片添加到媒体库
-     */
+    * 将帧图片批量添加到媒体库
+    * @param context 上下文对象
+    * @param outputDir 包含帧图片的目录
+    */
+    // TODO 并行处理帧图片写入
     private fun addFramesToMediaStore(context: Context, outputDir: File) {
         outputDir.listFiles()?.forEach { file ->
             if (file.isFile && file.name.endsWith(".png")) {
@@ -269,9 +315,15 @@ object FFmpegFrameExtractor {
     }
 
     /**
-     * 将单张图片添加到媒体库
-     */
+    * 将单张图片添加到媒体库
+    * @param context 上下文对象
+    * @param file 图片文件
+    * @param albumName 相册名称
+    * @return 插入的URI，失败返回null
+    */
+    // TODO 批量插入优化
     private fun addImageToMediaStore(context: Context, file: File, albumName: String): Uri? {
+        // 设置媒体库元数据
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, file.name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
@@ -290,6 +342,7 @@ object FFmpegFrameExtractor {
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 contentValues
             )?.also { uri ->
+                // 写入文件内容
                 context.contentResolver.openOutputStream(uri)?.use { os ->
                     file.inputStream().use { it.copyTo(os) }
                 }

@@ -57,7 +57,7 @@ object VideoUploader {
         Log.d(TAG, "Original: ${file.name}, Short: $shortFileName")
 
         // 使用定时器确保文件可访问（解决文件锁定问题）
-        // TODO 加入协程；加入超时放弃
+
         val timer = Timer()
         timer.schedule(object : TimerTask() {
             override fun run() {
@@ -83,6 +83,7 @@ object VideoUploader {
      * @param file 要上传的视频文件
      * @param callback 上传结果回调
      */
+    // TODO 这里是否可以以分片上传视频
     private fun performUpload(context: Context, file: File, callback: (Boolean) -> Unit) {
 
 

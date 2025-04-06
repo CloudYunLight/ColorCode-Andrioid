@@ -59,7 +59,7 @@ class ConfigActivity : AppCompatActivity() {
 
     }
 
-    // 添加新方法
+    // 显示清理帧图片确认对话框
     private fun showCleanFramesConfirmation() {
         AlertDialog.Builder(this)
             .setTitle(Html.fromHtml(getString((R.string.confirm_clean_frames_title))))
@@ -72,10 +72,13 @@ class ConfigActivity : AppCompatActivity() {
             .show()
     }
 
+    // TODO 清理图片集，可以并行处理
+    // 清理帧图片和MediaStore中的记录
     private fun cleanFramesAndMediaStore() {
         try {
             // 1. 清理Pictures目录下的帧图片
-            val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+            val picturesDir =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             val frameDirs = picturesDir.listFiles { file ->
                 file.isDirectory && file.name.startsWith("VideoFrames_[yzr]CQR")
             }
@@ -110,10 +113,11 @@ class ConfigActivity : AppCompatActivity() {
         }
     }
 
+    // 从MediaStore中删除指定相册的记录
     private fun deleteFromMediaStore(albumName: String) {
         val resolver = contentResolver
-        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} like ?"
+        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI// 外部存储的图片URI
+        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} like ?" // 查询条件
         val selectionArgs = arrayOf("%$albumName%")
 
         try {
@@ -126,8 +130,9 @@ class ConfigActivity : AppCompatActivity() {
 
     /**
      * 清理MOVIES/ColorCode目录下的所有文件
-     * TODO 可提速的点位欸
+     *
      */
+    // TODO 删除临时视频，可加速
     private fun cleanColorCodeDirectory() {
         try {
             // 获取ColorCode目录
@@ -170,11 +175,12 @@ class ConfigActivity : AppCompatActivity() {
         }
     }
 
-
+    // 伴生对象，包含日志标签
     companion object {
         private const val TAG = "ConfigActivity"
     }
 
+    // 保存设置并返回
     private fun saveSettingsAndReturn() {
         val url = binding.urlEditText.text.toString().trim()
         val generateFrames = binding.frameGenerationSwitch.isChecked
@@ -183,6 +189,7 @@ class ConfigActivity : AppCompatActivity() {
             url.isEmpty() -> binding.urlEditText.error = "URL cannot be empty"
             !url.startsWith("http://") && !url.startsWith("https://") ->
                 binding.urlEditText.error = "URL must start with http:// or https://"
+
             else -> {
                 // 保存所有设置
                 sharedPref.edit()

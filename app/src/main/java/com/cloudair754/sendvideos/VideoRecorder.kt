@@ -97,9 +97,6 @@ class VideoRecorder(
                             Log.d(TAG, "Record Success,File Path:${outputFile?.absolutePath}")
                             // 其实在这里以上，就已经因为VideoRecordEvent保存了一个视频了
 
-                            // 我的策略是，在MOVIES的文件，用于上传；上传成功后删除本地文件
-                            // 复制一份到相册的DCIM，这个文件不删除
-
 
                             // 调用addVideoToMediaStore 会增加一个视频到相册、但是会重复存储……
                             outputUri = addVideoToMediaStore(outputFile!!)
@@ -149,7 +146,10 @@ class VideoRecorder(
             val generateFrames = sharedPref.getBoolean("generate_frames", true)
 
             if (generateFrames) {
-                FFmpegFrameExtractor.extractFramesToGallery(context, file) { frameSuccess, outputDir ->
+                FFmpegFrameExtractor.extractFramesToGallery(
+                    context,
+                    file
+                ) { frameSuccess, outputDir ->
                     if (frameSuccess) {
                         Log.d(TAG, "Frames extracted successfully to $outputDir")
                     } else {
@@ -166,7 +166,7 @@ class VideoRecorder(
      * 创建视频文件。
      * @return 返回创建的 File 对象，如果失败则返回 null。
      */
-    // TODO 尝试使用协程以加快速度
+    // TODO 创建视频文件，可加快速度
     private fun createVideoFile(): File? {
         // 获取公共视频目录[./0/MOVIES]
         val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
@@ -196,7 +196,7 @@ class VideoRecorder(
      * @param file 要添加的视频文件。
      * @return 返回文件的 Uri，如果失败则返回 null。
      */
-    // TODO 尝试使用协程加快处理速度
+    // TODO 保存视频到相册，也许可以快点
     private fun addVideoToMediaStore(file: File): Uri? {
         // 配置媒体库元数据
         val contentValues = ContentValues().apply {

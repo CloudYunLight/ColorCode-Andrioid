@@ -108,13 +108,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-        // 在onCreate方法中添加配置按钮
+        // 跳转到配置页面
         binding.configButton.setOnClickListener {
             val intent = Intent(this, ConfigActivity::class.java)
             configLauncher.launch(intent)
         }
 
-        // 在onCreate方法中
+        // 调节缩放
         binding.zoomSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             @SuppressLint("SetTextI18n")
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
