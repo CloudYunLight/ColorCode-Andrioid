@@ -79,21 +79,8 @@ object FFmpegFrameExtractor {
 
         return albumDir
     }
-    /**
-    * 从视频文件获取日期信息
-    */
-    private fun getVideoDate(videoFile: File): Date {
-        // 尝试从文件名解析日期（根据您的命名格式）
-        val fileName = videoFile.name
-        val regex = Regex("""\d{8}_\d{6}""") // 匹配yyyyMMdd_HHmmss格式
-        val dateStr = regex.find(fileName)?.value ?: ""
 
-        return if (dateStr.isNotEmpty()) {
-            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).parse(dateStr) ?: Date(videoFile.lastModified())
-        } else {
-            Date(videoFile.lastModified())
-        }
-    }
+
 
     /**
     * 构建FFmpeg命令
@@ -104,10 +91,17 @@ object FFmpegFrameExtractor {
             Log.w(TAG, "No system font found, using default")
             ""
         }
+        // 获取视频名称（不含扩展名）
+        val videoName = videoFile.nameWithoutExtension
 
         return if (fontPath.isNotEmpty()) {
+            // 添加带外轮廓的水印（使用shadow效果模拟描边）
             "-i ${videoFile.absolutePath} " +
-                    "-vf \"fps=30,drawtext=fontfile=$fontPath:text='Frame %{frame_num}':x=10:y=h-th-10:fontsize=24:fontcolor=white\" " +
+                    "-vf \"fps=30," +
+                    "drawtext=fontfile=$fontPath:text='$videoName':x=10:y=h-th-40:" +
+                    "fontsize=24:fontcolor=white:shadowcolor=black:shadowx=2:shadowy=2," +
+                    "drawtext=fontfile=$fontPath:text='Frame %{frame_num}':x=10:y=h-th-10:" +
+                    "fontsize=24:fontcolor=white:shadowcolor=black:shadowx=2:shadowy=2\" " +
                     "-q:v 2 " +
                     outputPattern
         } else {
