@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.cloudair754.sendvideos.databinding.ActivityConfigBinding
 import java.io.File
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -158,46 +159,39 @@ class ConfigActivity : AppCompatActivity() {
      * 清理MOVIES/ColorCode目录下的所有文件
      *
      */
-    // TODO 删除临时视频，可加速
     private fun cleanColorCodeDirectory() {
-        try {
-            // 获取ColorCode目录
-            val colorCodeDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
-                "ColorCode"
-            )
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val colorCodeDir = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                        "ColorCode"
+                    )
 
-            // 检查目录是否存在
-            if (!colorCodeDir.exists() || !colorCodeDir.isDirectory) {
-                Toast.makeText(this, getString(R.string.no_files), Toast.LENGTH_SHORT).show()
-                return
-            }
+                    if (!colorCodeDir.exists() || !colorCodeDir.isDirectory) return@withContext 0 to R.string.no_files
 
-            // 删除目录下所有文件
-            val files = colorCodeDir.listFiles()
-            if (files.isNullOrEmpty()) {
-                Toast.makeText(this, getString(R.string.no_files), Toast.LENGTH_SHORT).show()
-                return
-            }
+                    val files = colorCodeDir.listFiles() ?: return@withContext 0 to R.string.no_files
+                    val deletedCount = files.count { it.delete() }
 
-            var deletedCount = 0
-            files.forEach { file ->
-                if (file.delete()) {
-                    deletedCount++
+                    if (deletedCount > 0) deletedCount to R.string.clean_success
+                    else 0 to R.string.no_files
+
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "权限不足", e)
+                    0 to R.string.clean_permission_denied
+                } catch (e: Exception) {
+                    Log.e(TAG, "清理失败", e)
+                    0 to R.string.clean_failed
                 }
             }
 
-            // 显示清理结果
-            val message = if (deletedCount > 0) {
-                getString(R.string.clean_success, deletedCount)
+            val (count, resId) = result
+            val message = if (resId == R.string.clean_success) {
+                getString(resId, count)
             } else {
-                getString(R.string.no_files)
+                getString(resId)
             }
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "清理文件失败", e)
-            Toast.makeText(this, R.string.clean_failed, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@ConfigActivity, message, Toast.LENGTH_SHORT).show()
         }
     }
 
