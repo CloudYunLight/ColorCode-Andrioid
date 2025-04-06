@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
@@ -66,6 +67,7 @@ object FFmpegFrameExtractor {
 
         // 3. 执行FFmpeg命令
         executeFFmpegCommand(context, command, outputDir, callback)
+
     }
 
     /**
@@ -189,6 +191,15 @@ object FFmpegFrameExtractor {
                         val progress = statistics.videoFrameNumber.toFloat() / FRAME_RATE
                         PercentProgressFFMPG = progress / videoDurationMs * 1000.0
                         Log.d(TAG, "Processing progress: $PercentProgressFFMPG")
+                        if (PercentProgressFFMPG > 0.9) {
+                            Log.i(TAG, "attemptExecution: Complete!!!")
+                            Handler(Looper.getMainLooper()).post {
+                                Toast.makeText(context, "已经完成了照片导出~", Toast.LENGTH_LONG)
+                                    .show()
+
+                            }
+
+                        }
                     })
                 }.start()
             }, 2000) // 延迟2秒
