@@ -38,7 +38,7 @@ object FFmpegFrameExtractor {
         "/system/fonts/NotoSans-Regular.ttf"
     )
 
-    // 在extractFramesToGallery方法开始处添加
+    // 拦截弹窗
     private fun showProgressDialog(context: Context) {
         Handler(Looper.getMainLooper()).post {
             progressDialog = AlertDialog.Builder(context)
@@ -68,7 +68,7 @@ object FFmpegFrameExtractor {
             }, 1000)
             return
         }
-        showProgressDialog(context)
+        showProgressDialog(context) // 拦截弹窗（阻止操作）
         // 1. 创建输出目录
         val outputDir = createOutputDirectory(context, videoFile) ?: run {
             callback(false, null)
@@ -205,6 +205,7 @@ object FFmpegFrameExtractor {
                         PercentProgressFFMPG = progress / videoDurationMs * 1000.0
                         Log.d(TAG, "Processing progress: $PercentProgressFFMPG")
 
+                        // 取消弹窗屏蔽罩
                         if (PercentProgressFFMPG > 0.8) {
                             Handler(Looper.getMainLooper()).post {
                                 progressDialog?.dismiss()
