@@ -27,6 +27,7 @@ object FFmpegFrameExtractor {
 
     private const val TAG = "FFmpegFrameExtractor"
     private const val FRAME_RATE = 30 // 默认帧率，实际应从视频元数据获取
+    var PercentProgressFFMPG = 0.0
 
     // Android系统字体路径列表
     private val systemFonts = listOf(
@@ -136,6 +137,9 @@ object FFmpegFrameExtractor {
 
         var retryCount = 0
         val maxRetries = 3
+        var videoDurationMs: Long = 0 // 存储视频持续时间(毫秒)
+        var currentFrame: Int = 0 // 存储当前处理的帧数
+        var durationStringBuffer: String? = null // 用于缓存第一条Duration消息
 
         fun attemptExecution() {
             // 延迟执行以确保文件完全释放
@@ -158,11 +162,33 @@ object FFmpegFrameExtractor {
                             }
                         }
                     }, { log ->
-                        Log.d(TAG, log.message)
+                        // 解析日志信息
+                        val message = log.message
+                        // Log.d(TAG, message)
+
+                        // 处理持续时间（分两条日志的情况）
+                        when {
+                            message.trim() == "Duration:" -> {
+                                // 这是第一条Duration消息，只包含标签
+                                durationStringBuffer = "Duration:"
+                            }
+
+                            durationStringBuffer == "Duration:" && message.trim()
+                                .matches(Regex("\\d{2}:\\d{2}:\\d{2}\\.\\d{2}")) -> {
+                                // 这是第二条Duration消息，包含时间值
+                                videoDurationMs = parseDurationToMs(message.trim())
+                                //Log.d(TAG, "Parsed video duration: $videoDurationMs ms")
+                                durationStringBuffer = null
+                            }
+
+
+                        }
+
                     }, { statistics ->
                         // 可以在这里处理进度更新
                         val progress = statistics.videoFrameNumber.toFloat() / FRAME_RATE
-                        Log.d(TAG, "Processing progress: $progress")
+                        PercentProgressFFMPG = progress / videoDurationMs * 1000.0
+                        Log.d(TAG, "Processing progress: $PercentProgressFFMPG")
                     })
                 }.start()
             }, 2000) // 延迟2秒
@@ -170,6 +196,28 @@ object FFmpegFrameExtractor {
 
         attemptExecution()
 
+    }
+
+
+    // 更健壮的持续时间解析方法
+    private fun parseDurationToMs(durationStr: String): Long {
+        return try {
+            val parts = durationStr.split(":", ".")
+            require(parts.size >= 4) { "Invalid duration format" }
+
+            val hours = parts[0].toLong()
+            val minutes = parts[1].toLong()
+            val seconds = parts[2].toLong()
+            val centiseconds = parts[3].take(2).padEnd(2, '0').toLong()
+
+            (hours * 3600 * 1000) +
+                    (minutes * 60 * 1000) +
+                    (seconds * 1000) +
+                    (centiseconds * 10)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing duration: $durationStr", e)
+            0
+        }
     }
 
 
