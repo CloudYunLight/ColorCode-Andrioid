@@ -1,6 +1,6 @@
 <!-- res/values/styles.xml -->
 <resources>
-    <style name="Theme.SendVideos" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="Theme.SendVideos" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- 在这里自定义你的主题 -->
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryDark">@color/purple_700</item>

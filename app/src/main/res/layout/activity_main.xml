@@ -6,6 +6,12 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- 状态栏占位 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="?android:attr/colorPrimary" />
+
     <!-- 视频预览区域 -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
