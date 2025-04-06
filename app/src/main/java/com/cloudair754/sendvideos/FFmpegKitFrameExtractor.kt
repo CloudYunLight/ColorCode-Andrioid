@@ -1,5 +1,6 @@
 package com.cloudair754.sendvideos
 
+import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
@@ -13,9 +14,6 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * FFmpeg视频帧提取工具
@@ -30,12 +28,27 @@ object FFmpegFrameExtractor {
     private const val FRAME_RATE = 30 // 默认帧率，实际应从视频元数据获取
     var PercentProgressFFMPG = 0.0
 
+    // 在类顶部添加
+    private var progressDialog: AlertDialog? = null
+
     // Android系统字体路径列表
     private val systemFonts = listOf(
         "/system/fonts/Roboto-Regular.ttf",
         "/system/fonts/DroidSans.ttf",
         "/system/fonts/NotoSans-Regular.ttf"
     )
+
+    // 在extractFramesToGallery方法开始处添加
+    private fun showProgressDialog(context: Context) {
+        Handler(Looper.getMainLooper()).post {
+            progressDialog = AlertDialog.Builder(context)
+                .setTitle("正在导出帧图片")
+                .setMessage("请稍候，正在处理视频帧...")
+                .setCancelable(false) // 不可手动取消
+                .create()
+            progressDialog?.show()
+        }
+    }
 
     /**
      * 提取视频帧并保存到相册
@@ -55,7 +68,7 @@ object FFmpegFrameExtractor {
             }, 1000)
             return
         }
-
+        showProgressDialog(context)
         // 1. 创建输出目录
         val outputDir = createOutputDirectory(context, videoFile) ?: run {
             callback(false, null)
@@ -191,15 +204,15 @@ object FFmpegFrameExtractor {
                         val progress = statistics.videoFrameNumber.toFloat() / FRAME_RATE
                         PercentProgressFFMPG = progress / videoDurationMs * 1000.0
                         Log.d(TAG, "Processing progress: $PercentProgressFFMPG")
-                        if (PercentProgressFFMPG > 0.9) {
-                            Log.i(TAG, "attemptExecution: Complete!!!")
+
+                        if (PercentProgressFFMPG > 0.8) {
                             Handler(Looper.getMainLooper()).post {
-                                Toast.makeText(context, "已经完成了照片导出~", Toast.LENGTH_LONG)
-                                    .show()
-
+                                progressDialog?.dismiss()
+                                progressDialog = null
+                                Toast.makeText(context, "照片导出完成", Toast.LENGTH_SHORT).show()
                             }
-
                         }
+
                     })
                 }.start()
             }, 2000) // 延迟2秒
