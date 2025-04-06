@@ -77,7 +77,7 @@ class ConfigActivity : AppCompatActivity() {
             // 1. 清理Pictures目录下的帧图片
             val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             val frameDirs = picturesDir.listFiles { file ->
-                file.isDirectory && file.name.startsWith("VideoFrames_")
+                file.isDirectory && file.name.startsWith("VideoFrames_[yzr]CQR")
             }
 
             var deletedCount = 0
