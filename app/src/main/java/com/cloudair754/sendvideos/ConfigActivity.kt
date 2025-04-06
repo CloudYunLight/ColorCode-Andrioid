@@ -13,6 +13,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.cloudair754.sendvideos.databinding.ActivityConfigBinding
 import java.io.File
 import androidx.appcompat.app.AlertDialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class ConfigActivity : AppCompatActivity() {
@@ -73,52 +77,74 @@ class ConfigActivity : AppCompatActivity() {
     }
 
     // TODO 清理图片集，可以并行处理
-    // 清理帧图片和MediaStore中的记录
     private fun cleanFramesAndMediaStore() {
-        try {
-            // 1. 清理Pictures目录下的帧图片
-            val picturesDir =
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            val frameDirs = picturesDir.listFiles { file ->
-                file.isDirectory && file.name.startsWith("VideoFrames_[yzr]CQR")
-            }
-
-            var deletedCount = 0
-
-            frameDirs?.forEach { dir ->
-                // 删除目录下所有文件
-                dir.listFiles()?.forEach { file ->
-                    if (file.delete()) {
-                        deletedCount++
-                    }
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    cleanFramesAndMediaStoreInternal()
                 }
-                // 删除空目录
-                dir.delete()
 
-                // 2. 从MediaStore中删除记录
-                deleteFromMediaStore(dir.name)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ConfigActivity,
+                        result.message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "清理帧图片失败", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ConfigActivity,
+                        R.string.clean_failed,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
+        }
+    }
 
-            // 显示结果
-            val message = if (deletedCount > 0) {
+    private suspend fun cleanFramesAndMediaStoreInternal(): CleanResult {
+        val picturesDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        val frameDirs = picturesDir.listFiles { file ->
+            file.isDirectory && file.name.startsWith("VideoFrames_[yzr]CQR")
+        }
+
+        val albumNames = mutableListOf<String>()
+        var deletedCount = 0
+
+        frameDirs?.forEach { dir ->
+            val files = dir.listFiles()
+            if (files != null) {
+                deletedCount += files.size
+            }
+            dir.deleteRecursively()
+            albumNames.add(dir.name)
+        }
+
+        if (albumNames.isNotEmpty()) {
+            deleteFromMediaStore(albumNames)
+        }
+
+        return CleanResult(
+            success = true,
+            message = if (deletedCount > 0) {
                 getString(R.string.frames_clean_success, deletedCount)
             } else {
                 getString(R.string.no_frames_found)
             }
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "清理帧图片失败", e)
-            Toast.makeText(this, R.string.clean_failed, Toast.LENGTH_SHORT).show()
-        }
+        )
     }
 
-    // 从MediaStore中删除指定相册的记录
-    private fun deleteFromMediaStore(albumName: String) {
+    data class CleanResult(val success: Boolean, val message: String)
+
+    private fun deleteFromMediaStore(albumNames: List<String>) {
         val resolver = contentResolver
-        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI// 外部存储的图片URI
-        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} like ?" // 查询条件
-        val selectionArgs = arrayOf("%$albumName%")
+        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val selection =
+            "${MediaStore.Images.Media.RELATIVE_PATH} in (${albumNames.joinToString(",") { "?" }})"
+        val selectionArgs = albumNames.toTypedArray()
 
         try {
             resolver.delete(uri, selection, selectionArgs)
@@ -126,6 +152,60 @@ class ConfigActivity : AppCompatActivity() {
             Log.e(TAG, "从MediaStore删除失败", e)
         }
     }
+
+//    // 清理帧图片和MediaStore中的记录
+//    private fun cleanFramesAndMediaStore() {
+//        try {
+//            // 1. 清理Pictures目录下的帧图片
+//            val picturesDir =
+//                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+//            val frameDirs = picturesDir.listFiles { file ->
+//                file.isDirectory && file.name.startsWith("VideoFrames_[yzr]CQR")
+//            }
+//
+//            var deletedCount = 0
+//
+//            frameDirs?.forEach { dir ->
+//                // 删除目录下所有文件
+//                dir.listFiles()?.forEach { file ->
+//                    if (file.delete()) {
+//                        deletedCount++
+//                    }
+//                }
+//                // 删除空目录
+//                dir.delete()
+//
+//                // 2. 从MediaStore中删除记录
+//                deleteFromMediaStore(dir.name)
+//            }
+//
+//            // 显示结果
+//            val message = if (deletedCount > 0) {
+//                getString(R.string.frames_clean_success, deletedCount)
+//            } else {
+//                getString(R.string.no_frames_found)
+//            }
+//            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+//
+//        } catch (e: Exception) {
+//            Log.e(TAG, "清理帧图片失败", e)
+//            Toast.makeText(this, R.string.clean_failed, Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    // 从MediaStore中删除指定相册的记录
+//    private fun deleteFromMediaStore(albumName: String) {
+//        val resolver = contentResolver
+//        val uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI// 外部存储的图片URI
+//        val selection = "${MediaStore.Images.Media.RELATIVE_PATH} like ?" // 查询条件
+//        val selectionArgs = arrayOf("%$albumName%")
+//
+//        try {
+//            resolver.delete(uri, selection, selectionArgs)
+//        } catch (e: Exception) {
+//            Log.e(TAG, "从MediaStore删除失败", e)
+//        }
+//    }
 
 
     /**
