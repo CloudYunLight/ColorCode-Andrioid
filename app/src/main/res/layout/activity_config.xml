@@ -8,7 +8,7 @@
     android:padding="16dp"
     tools:context=".ConfigActivity">
 
-    <!-- 原有内容保持不变 -->
+    <!-- 网址信息 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -25,7 +25,7 @@
         android:inputType="textUri"
         android:autofillHints="url" />
 
-    <!-- 新增版本信息部分 -->
+    <!-- 版本信息 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -51,7 +51,8 @@
             android:textColor="@android:color/black"/>
     </ScrollView>
 
-    <!-- 在版本信息部分下方添加 -->
+
+    <!-- 帧生成模式开关 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -73,7 +74,7 @@
     </LinearLayout>
 
 
-    <!-- 在原有按钮上方添加清理按钮 -->
+    <!-- 清理按钮 -->
     <Button
         android:id="@+id/cleanButton"
         android:layout_width="match_parent"
@@ -81,7 +82,7 @@
         android:layout_marginTop="24dp"
         android:text="@string/clean_files" />
 
-    <!-- 在cleanButton下方添加 -->
+
     <Button
         android:id="@+id/cleanFramesButton"
         android:layout_width="match_parent"
@@ -90,7 +91,7 @@
         android:text="@string/clean_frames" />
 
 
-    <!-- 原有按钮保持不变 -->
+    <!-- 退出页面 -->
     <Button
         android:id="@+id/saveButton"
         android:layout_width="match_parent"

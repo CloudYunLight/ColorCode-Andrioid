@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">SendVideos</string>
-    <string name="upload_server_url_config">Upload Server URL</string>
-    <string name="enter_upload_url_config">Enter upload URL</string>
-    <string name="version_info_config_placeholder">Version Info</string>
-    <string name="save_config">Save</string>
-    <string name="back_config">Back</string>
+    <string name="app_name">三维码识别</string>
+    <string name="upload_server_url_config">更新服务器网址</string>
+    <string name="enter_upload_url_config">输入新网址</string>
+    <string name="version_info_config_placeholder">版本信息</string>
+    <string name="save_config">保存并退出</string>
+    <string name="back_config">不保存退出</string>
 
     <string name="clean_files">清理临时视频文件</string>
     <string name="clean_success">已清理 %d 个文件</string>
@@ -20,4 +20,8 @@
     <string name="confirm_clean_frames_title"><![CDATA[确认删除所有帧图片？]]></string>
     <string name="confirm_clean_frames_message"><![CDATA[<font color="#FF0000">警告：此操作将永久删除所有生成的帧图片，且无法恢复！</font>]]></string>
     <string name="confirm_delete_button"><![CDATA[<font color="#FF0000">我已知悉，永久删除</font>]]></string>
+
+    <string name="Btn_record">开始录制</string>
+    <string name="Btn_stop">结束录制</string>
+    <string name="Btn_config">配置</string>
 </resources>

@@ -51,7 +51,7 @@
             android:textStyle="bold"/>
     </LinearLayout>
 
-    <!-- 改进后的缩放控制区域 -->
+    <!-- 缩放控制区域 -->
     <LinearLayout
         android:id="@+id/zoomControlContainer"
         android:layout_width="0dp"
@@ -122,7 +122,7 @@
             android:id="@+id/recordButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Record"
+            android:text="@string/Btn_record"
             android:layout_marginEnd="16dp" />
 
         <!-- 停止按钮 -->
@@ -130,14 +130,15 @@
             android:id="@+id/stopButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stop" />
+            android:text="@string/Btn_stop"
+            android:layout_marginEnd="16dp"/>
 
-        <!-- 在buttonContainer LinearLayout中添加 -->
+        <!-- 配置按钮 -->
         <Button
             android:id="@+id/configButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Config"
+            android:text="@string/Btn_config"
             android:layout_marginEnd="16dp" />
 
     </LinearLayout>
