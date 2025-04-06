@@ -15,6 +15,8 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -73,7 +75,7 @@ class VideoRecorder(
          *VideoCapture 是 CameraX 提供的用于视频捕获的用例：
          *
          */
-
+        // TODO 加速？
         recording = videoCapture.output
             .prepareRecording(context, fileOutputOptions)
             .start(ContextCompat.getMainExecutor(context)) { event ->
@@ -166,7 +168,7 @@ class VideoRecorder(
      * 创建视频文件。
      * @return 返回创建的 File 对象，如果失败则返回 null。
      */
-    // TODO 创建视频文件，可加快速度
+
     private fun createVideoFile(): File? {
         // 获取公共视频目录[./0/MOVIES]
         val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
@@ -196,37 +198,45 @@ class VideoRecorder(
      * @param file 要添加的视频文件。
      * @return 返回文件的 Uri，如果失败则返回 null。
      */
-    // TODO 保存视频到相册，也许可以快点
+
     private fun addVideoToMediaStore(file: File): Uri? {
-        // 配置媒体库元数据
+        if (!file.exists()) {
+            Log.e(TAG, "Source file does not exist: ${file.path}")
+            return null
+        }
+
         val contentValues = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, file.name) // 文件名
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")  // MIME类型
-            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM)// 存储路径
-            // 存储到DCIM
+            put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
+            put(MediaStore.Video.Media.SIZE, file.length())
+            put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.Video.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
         }
 
         return try {
-            // 插入媒体库记录
-            val uri = context.contentResolver.insert(
+            context.contentResolver.insert(
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                 contentValues
-            )
-            if (uri != null) {
-                // 将视频文件内容写入媒体库
-                val outputStream = context.contentResolver.openOutputStream(uri)
-                outputStream?.use { os ->
-                    file.inputStream().use { it.copyTo(os) }
+            )?.also { uri ->
+                context.contentResolver.openFileDescriptor(uri, "w")?.use { pfd ->
+                    FileOutputStream(pfd.fileDescriptor).use { fos ->
+                        file.inputStream().use { it.copyTo(fos) }
+                    }
                 }
-                val videoURi = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                Log.i(TAG, "Root Path:$videoURi")
-                Log.d(TAG, "Video added to MediaStore: $uri")
-            } else {
-                Log.e(TAG, "Failed to insert video into MediaStore")
+                Log.d(TAG, "Video successfully saved to MediaStore: $uri")
+            } ?: run {
+                Log.e(TAG, "Failed to create MediaStore entry")
+                null
             }
-            uri
+        } catch (e: IOException) {
+            Log.e(TAG, "IO error saving video to MediaStore", e)
+            null
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission error saving video to MediaStore", e)
+            null
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding video to MediaStore", e)
+            Log.e(TAG, "Unexpected error saving video to MediaStore", e)
             null
         }
     }
