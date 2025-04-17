@@ -26,5 +26,8 @@
     <string name="Btn_stop">结束录制</string>
     <string name="Btn_config">配置</string>
 
+    <string name="ProgressDialogTitle">"正在导出帧图片"</string>
+    <string name="ProgressDialogContext">"请稍候，正在处理视频帧...\n\n!耗时大概为 2.5倍 视频时长!"</string>
+
 
 </resources>

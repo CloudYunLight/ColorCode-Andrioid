@@ -14,6 +14,7 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegSession
 import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * FFmpeg视频帧提取工具
@@ -46,8 +47,8 @@ object FFmpegFrameExtractor {
         // 在主线程中显示弹窗
         Handler(Looper.getMainLooper()).post {
             progressDialog = AlertDialog.Builder(context)
-                .setTitle("正在导出帧图片")
-                .setMessage("请稍候，正在处理视频帧...")
+                .setTitle(context.getString(R.string.ProgressDialogTitle))
+                .setMessage(context.getString(R.string.ProgressDialogContext))
                 .setCancelable(false) // 不可手动取消
                 .create()
             progressDialog?.show()
@@ -133,6 +134,7 @@ object FFmpegFrameExtractor {
         return if (fontPath.isNotEmpty()) {
             // 添加带外轮廓的水印（使用shadow效果模拟描边）
             // (不再优化，再如何使用平行方案，比率均为1)
+            // 这里设置了文件名称——outputPattern
             "-i ${videoFile.absolutePath} " +
                     "-vf \"fps=30," +
                     "drawtext=fontfile=$fontPath:text='$videoName':x=10:y=h-th-40:" +
@@ -228,14 +230,14 @@ object FFmpegFrameExtractor {
                         PercentProgressFFMPG = progress / videoDurationMs * 1000.0
                         Log.d(TAG, "Processing progress: $PercentProgressFFMPG")
 
-                        // 取消弹窗屏蔽罩
-                        if (PercentProgressFFMPG > 0.8) {
-                            Handler(Looper.getMainLooper()).post {
-                                progressDialog?.dismiss()
-                                progressDialog = null
-                                Toast.makeText(context, "照片导出完成", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+//                        // 取消弹窗屏蔽罩
+//                        if (PercentProgressFFMPG > 0.8) {
+//                            Handler(Looper.getMainLooper()).post {
+//                                progressDialog?.dismiss()
+//                                progressDialog = null
+//                                Toast.makeText(context, "照片导出完成", Toast.LENGTH_SHORT).show()
+//                            }
+//                        }
 
                     })
                 }.start()
@@ -293,13 +295,34 @@ object FFmpegFrameExtractor {
     * @param context 上下文对象
     * @param outputDir 包含帧图片的目录
     */
-    // TODO 并行处理帧图片写入
+
     private fun addFramesToMediaStore(context: Context, outputDir: File) {
-        outputDir.listFiles()?.forEach { file ->
-            if (file.isFile && file.name.endsWith(".png")) {
+        val startTime = System.currentTimeMillis()
+
+        val files = outputDir.listFiles()?.filter { it.isFile && it.name.endsWith(".png") }
+
+
+        // 使用线程池并行处理
+        val executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+        val futures = files?.map { file ->
+            executor.submit {
                 addImageToMediaStore(context, file, outputDir.name)
             }
         }
+
+        // 等待所有任务完成
+        futures?.forEach { it.get() }
+        executor.shutdown()
+        val endTime = System.currentTimeMillis()
+        val duration = endTime - startTime
+        Log.d(TAG, "addFramesToMediaStore Time: ${duration}ms")
+
+        progressDialog?.dismiss()
+        progressDialog = null
+        Toast.makeText(context, "照片导出完成", Toast.LENGTH_SHORT).show()
+
+        // 5s  ==> 5.9s ,8.4s
+        // 10s ==> 13s,15s
     }
 
     /**
@@ -309,7 +332,6 @@ object FFmpegFrameExtractor {
     * @param albumName 相册名称
     * @return 插入的URI，失败返回null
     */
-    // TODO 批量插入优化
     private fun addImageToMediaStore(context: Context, file: File, albumName: String): Uri? {
         // 设置媒体库元数据
         val contentValues = ContentValues().apply {
