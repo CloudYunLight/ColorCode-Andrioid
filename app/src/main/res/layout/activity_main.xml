@@ -6,6 +6,12 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- 状态栏占位 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="?android:attr/colorPrimary" />
+
     <!-- 视频预览区域 -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
@@ -51,6 +57,60 @@
             android:textStyle="bold"/>
     </LinearLayout>
 
+    <!-- 缩放控制区域 -->
+    <LinearLayout
+        android:id="@+id/zoomControlContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#80000000"
+        app:layout_constraintBottom_toTopOf="@id/buttonContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/baseline_zoom_out_24"
+                app:tint="@android:color/white" />
+
+            <SeekBar
+                android:id="@+id/zoomSeekBar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="200"
+                android:progress="100"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"/>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/baseline_zoom_in_24"
+                app:tint="@android:color/white" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/zoomValueText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="1.0x"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+
+
+
     <!-- 按钮容器 -->
     <LinearLayout
         android:id="@+id/buttonContainer"
@@ -68,7 +128,7 @@
             android:id="@+id/recordButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Record"
+            android:text="@string/Btn_record"
             android:layout_marginEnd="16dp" />
 
         <!-- 停止按钮 -->
@@ -76,14 +136,15 @@
             android:id="@+id/stopButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stop" />
+            android:text="@string/Btn_stop"
+            android:layout_marginEnd="16dp"/>
 
-        <!-- 在buttonContainer LinearLayout中添加 -->
+        <!-- 配置按钮 -->
         <Button
             android:id="@+id/configButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Config"
+            android:text="@string/Btn_config"
             android:layout_marginEnd="16dp" />
 
     </LinearLayout>

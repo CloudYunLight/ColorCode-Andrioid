@@ -50,6 +50,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildToolsVersion = "35.0.0"
 }
 
 dependencies {
@@ -62,6 +63,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,14 +72,19 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation ("androidx.camera:camera-core:1.4.1")
-    implementation ("androidx.camera:camera-camera2:1.4.1")
-    implementation ("androidx.camera:camera-lifecycle:1.4.1")
-    implementation ("androidx.camera:camera-view:1.4.1")
-    implementation ("androidx.camera:camera-video:1.4.1")
-    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation ("androidx.core:core-ktx:1.13.1")
-    implementation ("androidx.appcompat:appcompat:1.6.1")
-    implementation ("com.google.android.material:material:1.12.0")
-    implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation (libs.androidx.camera.core)
+    implementation (libs.androidx.camera.camera2)
+    implementation (libs.androidx.camera.lifecycle)
+    implementation (libs.androidx.camera.view)
+    implementation (libs.androidx.camera.video)
+    implementation (libs.okhttp)
+    implementation (libs.androidx.core.ktx.v1131)
+    implementation (libs.androidx.appcompat)
+    implementation (libs.material)
+    implementation (libs.androidx.constraintlayout)
+
+    // https://mvnrepository.com/artifact/com.arthenica/ffmpeg-kit-full
+    implementation(libs.ffmpeg.kit.full)
+
+
 }

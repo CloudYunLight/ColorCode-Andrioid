@@ -3,6 +3,8 @@ package com.cloudair754.sendvideos
 import android.content.Context
 import android.util.Log
 import androidx.camera.core.AspectRatio
+import androidx.camera.core.CameraControl
+import androidx.camera.core.CameraInfo
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -11,6 +13,7 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.lang.Math.pow
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -24,6 +27,19 @@ import java.util.concurrent.Executors
  */
 class VideoHandler(private val context: Context, private val previewView: PreviewView) {
 
+    // 添加录制状态监听器接口
+    interface RecordingStateListener {
+        fun onRecordingStarted()
+        fun onRecordingStopped()
+    }
+
+    private var recordingStateListener: RecordingStateListener? = null
+
+    // 设置监听器的方法
+    fun setRecordingStateListener(listener: RecordingStateListener) {
+        this.recordingStateListener = listener
+    }
+
     // 相机操作执行器（单线程）
     private lateinit var cameraExecutor: ExecutorService
 
@@ -32,6 +48,11 @@ class VideoHandler(private val context: Context, private val previewView: Previe
 
     // 视频录制控制器
     private lateinit var videoRecorder: VideoRecorder
+
+    // 添加成员变量
+    private var cameraControl: CameraControl? = null
+    private var cameraInfo: CameraInfo? = null
+
 
     companion object {
         private const val TAG = "VideoHandler"
@@ -47,7 +68,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
      */
     fun startCamera() {
 
-        Log.d(TAG, "启动相机，使用16:9宽高比...")
+        Log.d(TAG, "Start Camera,Use 16:9")
         // 获取相机提供者Future
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
@@ -74,17 +95,26 @@ class VideoHandler(private val context: Context, private val previewView: Previe
             videoRecorder = VideoRecorder(context, videoCapture)
 
             try {
-                // 解绑所有用例并重新绑定
                 cameraProvider.unbindAll()
 
-                // 绑定新的用例到生命周期
-                cameraProvider.bindToLifecycle(
+                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                val camera = cameraProvider.bindToLifecycle(
                     context as androidx.lifecycle.LifecycleOwner,
-                    CameraSelector.DEFAULT_BACK_CAMERA, // 使用后置摄像头
-                    preview,// 预览用例
-                    videoCapture// 视频捕获用例
+                    cameraSelector,
+                    preview,
+                    videoCapture
                 )
-                Log.d(TAG, "相机成功启动，使用16:9宽高比")
+
+                // 获取相机控制对象
+                cameraControl = camera.cameraControl
+                cameraInfo = camera.cameraInfo
+                Log.d(TAG, "Camera control initialized")
+
+                // 检查缩放支持
+                if ((cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1f ) <= 1f) {
+                    Log.w(TAG, "This device doesn't support zoom")
+                }
+
             } catch (exc: Exception) {
                 Log.e(TAG, "用例绑定失败", exc)
             }
@@ -95,6 +125,50 @@ class VideoHandler(private val context: Context, private val previewView: Previe
         Log.d(TAG, "Camera executor initialized.")
     }
 
+
+    /**
+     * 获取相机支持的缩放范围
+     */
+    fun getZoomRange(): Pair<Float, Float> {
+        return cameraInfo?.zoomState?.value?.let {
+            it.minZoomRatio to it.maxZoomRatio
+        } ?: (1f to 1f)
+    }
+
+
+    /**
+     * 设置相机缩放级别
+     * @param zoomValue 缩放值 (0.5-2.0)
+     */
+    fun setZoom(zoomValue: Float) {
+        cameraInfo?.let { info ->
+            cameraControl?.let { control ->
+                val clampedZoom = zoomValue.coerceIn(
+                    info.zoomState.value?.minZoomRatio ?: 1f,
+                    info.zoomState.value?.maxZoomRatio ?: 1f
+                )
+                control.setZoomRatio(clampedZoom)
+            }
+        }
+    }
+
+    /**
+     * 增强版缩放控制
+     * @param progress 0-200的滑块进度值
+     * @return 实际设置的缩放值
+     */
+    fun setEnhancedZoom(progress: Int): Float {
+        val (minZoom, maxZoom) = getZoomRange()
+
+        // 使用指数曲线增加小范围的灵敏度
+        val normalizedProgress = progress / 200f
+        val zoomValue = minZoom * pow((maxZoom / minZoom).toDouble(), normalizedProgress.toDouble()).toFloat()
+
+        cameraControl?.setZoomRatio(zoomValue)
+        return zoomValue
+    }
+
+
     /**
      * 开始视频录制
      * 委托给VideoRecorder处理
@@ -102,6 +176,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
     fun startRecording() {
         // 将视频流权限都给videoRecoder 类去处理
         videoRecorder.startRecording()
+        recordingStateListener?.onRecordingStarted()
     }
 
     /**
@@ -109,6 +184,7 @@ class VideoHandler(private val context: Context, private val previewView: Previe
      */
     fun stopRecording() {
         videoRecorder.stopRecording()
+        recordingStateListener?.onRecordingStopped()
     }
 
 

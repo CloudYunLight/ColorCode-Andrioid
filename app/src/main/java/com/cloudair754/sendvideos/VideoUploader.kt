@@ -1,5 +1,6 @@
 package com.cloudair754.sendvideos
 
+import android.app.AlertDialog
 import android.util.Log
 import android.widget.Toast
 import okhttp3.*
@@ -24,6 +25,12 @@ import android.os.Looper
  */
 object VideoUploader {
 
+    private var networkChecker: NetworkStatusChecker? = null
+
+    fun setNetworkChecker(checker: NetworkStatusChecker) {
+        this.networkChecker = checker
+    }
+
     private const val TAG = "VideoUploader"
     private val client = OkHttpClient()// OkHttp客户端实例
 
@@ -34,6 +41,15 @@ object VideoUploader {
      * @param callback 上传结果回调（成功/失败）
      */
     fun uploadVideo(context: Context, file: File, callback: (Boolean) -> Unit) {
+
+        // 检查网络状态
+        networkChecker?.let { checker ->
+            if (checker.currentNetworkQuality == NetworkStatusChecker.NetworkQuality.POOR) {
+                showToast(context, "网络质量差，已取消上传")
+                callback(false)
+                return
+            }
+        }
         Log.d(TAG, "Attempting to upload file: ${file.name}")
         showToast(context, "准备上传视频...")
 
@@ -42,7 +58,7 @@ object VideoUploader {
         Log.d(TAG, "Original: ${file.name}, Short: $shortFileName")
 
         // 使用定时器确保文件可访问（解决文件锁定问题）
-        // TODO 加入协程；加入超时放弃
+
         val timer = Timer()
         timer.schedule(object : TimerTask() {
             override fun run() {
@@ -68,6 +84,7 @@ object VideoUploader {
      * @param file 要上传的视频文件
      * @param callback 上传结果回调
      */
+    // TODO 这里是否可以以分片上传视频
     private fun performUpload(context: Context, file: File, callback: (Boolean) -> Unit) {
 
 
@@ -105,31 +122,61 @@ object VideoUploader {
                 // 上传失败处理
                 Log.e(TAG, "Upload failed to $uploadUrl", e)
                 showToast(context, "上传失败: ${e.message}")
+
                 callback(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val success = response.isSuccessful
-                if (success) {
-                    // 上传成功处理
-                    file.delete() // 上传成功后删除本地文件
+                try {
+                    // 1. 先获取状态码（无论成功与否都要读取）
+                    val statusCode = response.code
 
-                    showToast(context, "上传成功: $uploadUrl ")
-                    // toast 需要在主线程运行
+                    // 2. 只调用一次 string() 并存储结果
+                    val responseBody = response.body?.string() ?: "无返回内容"
 
-                } else {
-                    showToast(
-                        context,
-                        "上传失败，错误码: ${response.code}"
-                    )
-                    Log.e(TAG, "Upload to $uploadUrl failed with code: ${response.code}")
-                    Log.e(TAG, "Response body: ${response.body?.string()}")
+                    // 3. 打印完整日志（包含状态码和响应体）
+                    Log.i(TAG, "HTTP $statusCode | Response: $responseBody")
+
+                    // 4. 根据状态码处理不同情况
+                    if (response.isSuccessful) {
+                        showToast(context, "上传成功 (HTTP $statusCode)")
+                        showResponseDialog(context, "上传成功", "状态码: $statusCode\n$responseBody")
+                        callback(true)
+                    } else {
+                        // 特殊处理 404
+                        val errorMsg = when (statusCode) {
+                            404 -> "服务器找不到目标地址 (404)\n请检查上传URL是否正确"
+                            else -> "上传失败 (HTTP $statusCode)\n$responseBody"
+                        }
+                        showToast(context, "上传失败: HTTP $statusCode")
+                        showResponseDialog(context, "上传失败", errorMsg)
+                        callback(false)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "处理响应时出错", e)
+                    showToast(context, "网络请求异常: ${e.javaClass.simpleName}")
+                    callback(false)
                 }
-                Log.d(TAG, "Server response code: ${response.code}")
-                callback(success)
-
             }
         })
+    }
+
+
+
+    /**
+     * 显示服务器响应信息的对话框
+     * @param title 对话框标题
+     * @param message 要显示的消息内容
+     */
+    private fun showResponseDialog(context: Context, title: String, message: String) {
+        Handler(Looper.getMainLooper()).post {
+            AlertDialog.Builder(context)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+                .create()
+                .show()
+        }
     }
 
     /**
@@ -138,7 +185,7 @@ object VideoUploader {
      */
     private fun showToast(context: Context, message: String) {
         Handler(Looper.getMainLooper()).post {
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -15,6 +15,8 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -97,9 +99,6 @@ class VideoRecorder(
                             Log.d(TAG, "Record Success,File Path:${outputFile?.absolutePath}")
                             // 其实在这里以上，就已经因为VideoRecordEvent保存了一个视频了
 
-                            // 我的策略是，在MOVIES的文件，用于上传；上传成功后删除本地文件
-                            // 复制一份到相册的DCIM，这个文件不删除
-
 
                             // 调用addVideoToMediaStore 会增加一个视频到相册、但是会重复存储……
                             outputUri = addVideoToMediaStore(outputFile!!)
@@ -134,14 +133,32 @@ class VideoRecorder(
         // 此处用的文件是recoding直接产生的内容，而且成功上传后会删除掉
 
         outputFile?.let { file ->
-            VideoUploader.uploadVideo(context, file) { success ->
-                if (success) {
-                    Log.d(TAG, "The video was uploaded successfully")
+            // 检查是否启用帧生成
+            val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
+            val isRemoteUploadMode = sharedPref.getBoolean("remote_upload", false)
 
-                } else {
-
-                    Log.e(TAG, "The video upload failed")
+            if (isRemoteUploadMode) {
+                // 远程上传模式
+                VideoUploader.uploadVideo(context, file) { success ->
+                    if (success) {
+                        Log.d(TAG, "Video Upload Succeed")
+                    } else {
+                        Log.e(TAG, "Video Upload Failed")
+                    }
                 }
+            } else {
+                // 本地拆帧模式
+                FFmpegFrameExtractor.extractFramesToGallery(
+                    context,
+                    file
+                ) { frameSuccess, outputDir ->
+                    if (frameSuccess) {
+                        Log.d(TAG, "Frame Succeed")
+                    } else {
+                        Log.e(TAG, "Frame Failed")
+                    }
+                }
+
             }
         }
 
@@ -151,24 +168,28 @@ class VideoRecorder(
      * 创建视频文件。
      * @return 返回创建的 File 对象，如果失败则返回 null。
      */
-    // TODO 尝试使用协程以加快速度
+
     private fun createVideoFile(): File? {
-
-
         // 获取公共视频目录[./0/MOVIES]
-        val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-        if (!storageDir.exists()) {
-            storageDir.mkdirs() // 如果目录不存在，则创建
+        val storageDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+
+        // 创建ColorCode子目录
+        val yzrDir = File(storageDir, "ColorCode")
+        if (!yzrDir.exists()) {
+            if (!yzrDir.mkdirs()) {
+                Log.e(TAG, "Failed to create ColorCode directory")
+                showToast("无法创建ColorCode目录")
+                return null
+            }
         }
 
         // 生成带时间戳的文件名
-
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "[yzr]CQR_${timeStamp}.mp4"
 
-        return File(storageDir, fileName).also {
+        return File(yzrDir, fileName).also {
             Log.d(TAG, "Video file created: ${it.absolutePath}")
-            // 提示用户文件存储位置
             showToast("视频文件已创建，存储位置：${it.absolutePath}")
         }
     }
@@ -178,37 +199,45 @@ class VideoRecorder(
      * @param file 要添加的视频文件。
      * @return 返回文件的 Uri，如果失败则返回 null。
      */
-    // TODO 尝试使用协程加快处理速度
+
     private fun addVideoToMediaStore(file: File): Uri? {
-        // 配置媒体库元数据
+        if (!file.exists()) {
+            Log.e(TAG, "Source file does not exist: ${file.path}")
+            return null
+        }
+
         val contentValues = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, file.name) // 文件名
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")  // MIME类型
-            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM)// 存储路径
-            // 存储到DCIM
+            put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
+            put(MediaStore.Video.Media.SIZE, file.length())
+            put(MediaStore.Video.Media.DATE_ADDED, System.currentTimeMillis() / 1000)
+            put(MediaStore.Video.Media.DATE_MODIFIED, System.currentTimeMillis() / 1000)
         }
 
         return try {
-            // 插入媒体库记录
-            val uri = context.contentResolver.insert(
+            context.contentResolver.insert(
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                 contentValues
-            )
-            if (uri != null) {
-                // 将视频文件内容写入媒体库
-                val outputStream = context.contentResolver.openOutputStream(uri)
-                outputStream?.use { os ->
-                    file.inputStream().use { it.copyTo(os) }
+            )?.also { uri ->
+                context.contentResolver.openFileDescriptor(uri, "w")?.use { pfd ->
+                    FileOutputStream(pfd.fileDescriptor).use { fos ->
+                        file.inputStream().use { it.copyTo(fos) }
+                    }
                 }
-                val videoURi = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                Log.i(TAG, "Root Path:$videoURi")
-                Log.d(TAG, "Video added to MediaStore: $uri")
-            } else {
-                Log.e(TAG, "Failed to insert video into MediaStore")
+                Log.d(TAG, "Video successfully saved to MediaStore: $uri")
+            } ?: run {
+                Log.e(TAG, "Failed to create MediaStore entry")
+                null
             }
-            uri
+        } catch (e: IOException) {
+            Log.e(TAG, "IO error saving video to MediaStore", e)
+            null
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Permission error saving video to MediaStore", e)
+            null
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding video to MediaStore", e)
+            Log.e(TAG, "Unexpected error saving video to MediaStore", e)
             null
         }
     }

@@ -8,10 +8,17 @@
     android:padding="16dp"
     tools:context=".ConfigActivity">
 
+    <!-- 状态栏占位 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="?android:attr/colorPrimary" />
+
+    <!-- 网址信息 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Upload Server URL"
+        android:text="@string/upload_server_url_config"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -20,21 +27,112 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="Enter upload URL"
-        android:inputType="textUri" />
+        android:hint="@string/enter_upload_url_config"
+        android:inputType="textUri"
+        android:autofillHints="url" />
 
-    <Button
-        android:id="@+id/saveButton"
-        android:layout_width="match_parent"
+    <!-- 版本信息 -->
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Save" />
+        android:text="@string/version_info_config_placeholder"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"/>
 
-    <Button
-        android:id="@+id/backButton"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="8dp"
-        android:text="Back" />
+        android:background="@android:color/white"
+        android:padding="8dp">
 
+        <TextView
+            android:id="@+id/readmeTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_readme"
+            android:textSize="14sp"
+            android:textColor="@android:color/black"/>
+    </ScrollView>
+
+    <!-- 替换原来的两个开关布局 -->
+    <RadioGroup
+        android:id="@+id/functionModeGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/localFramesRadio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/local_frames_mode"
+            android:textSize="16sp"/>
+
+        <RadioButton
+            android:id="@+id/remoteUploadRadio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/remote_upload_mode"
+            android:textSize="16sp"/>
+    </RadioGroup>
+
+
+    <!-- 按钮组 - 两两并排 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        android:weightSum="2">
+
+        <!-- 清理文件按钮 -->
+        <Button
+            android:id="@+id/cleanButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="@string/clean_files" />
+
+        <!-- 清理帧按钮 -->
+        <Button
+            android:id="@+id/cleanFramesButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/clean_frames" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:weightSum="2">
+
+        <!-- 保存按钮 -->
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="@string/save_config" />
+
+        <!-- 返回按钮 -->
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/back_config" />
+    </LinearLayout>
 </LinearLayout>
