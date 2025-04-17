@@ -1,5 +1,6 @@
 package com.cloudair754.sendvideos
 
+import android.app.AlertDialog
 import android.util.Log
 import android.widget.Toast
 import okhttp3.*
@@ -126,25 +127,56 @@ object VideoUploader {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val success = response.isSuccessful
-                if (success) {
+                try {
+                    // 1. 先获取状态码（无论成功与否都要读取）
+                    val statusCode = response.code
 
-                    showToast(context, "上传成功: $uploadUrl ")
-                    // toast 需要在主线程运行
+                    // 2. 只调用一次 string() 并存储结果
+                    val responseBody = response.body?.string() ?: "无返回内容"
 
-                } else {
-                    showToast(
-                        context,
-                        "上传失败，错误码: ${response.code}"
-                    )
-                    Log.e(TAG, "Upload to $uploadUrl failed with code: ${response.code}")
-                    Log.e(TAG, "Response body: ${response.body?.string()}")
+                    // 3. 打印完整日志（包含状态码和响应体）
+                    Log.i(TAG, "HTTP $statusCode | Response: $responseBody")
+
+                    // 4. 根据状态码处理不同情况
+                    if (response.isSuccessful) {
+                        showToast(context, "上传成功 (HTTP $statusCode)")
+                        showResponseDialog(context, "上传成功", "状态码: $statusCode\n$responseBody")
+                        callback(true)
+                    } else {
+                        // 特殊处理 404
+                        val errorMsg = when (statusCode) {
+                            404 -> "服务器找不到目标地址 (404)\n请检查上传URL是否正确"
+                            else -> "上传失败 (HTTP $statusCode)\n$responseBody"
+                        }
+                        showToast(context, "上传失败: HTTP $statusCode")
+                        showResponseDialog(context, "上传失败", errorMsg)
+                        callback(false)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "处理响应时出错", e)
+                    showToast(context, "网络请求异常: ${e.javaClass.simpleName}")
+                    callback(false)
                 }
-                Log.d(TAG, "Server response code: ${response.code}")
-                callback(success)
-
             }
         })
+    }
+
+
+
+    /**
+     * 显示服务器响应信息的对话框
+     * @param title 对话框标题
+     * @param message 要显示的消息内容
+     */
+    private fun showResponseDialog(context: Context, title: String, message: String) {
+        Handler(Looper.getMainLooper()).post {
+            AlertDialog.Builder(context)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+                .create()
+                .show()
+        }
     }
 
     /**
