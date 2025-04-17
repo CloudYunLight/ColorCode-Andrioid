@@ -133,33 +133,33 @@ class VideoRecorder(
         // 此处用的文件是recoding直接产生的内容，而且成功上传后会删除掉
 
         outputFile?.let { file ->
-            VideoUploader.uploadVideo(context, file) { success ->
-                if (success) {
-                    Log.d(TAG, "The video was uploaded successfully")
-
-                } else {
-
-                    Log.e(TAG, "The video upload failed")
-                }
-            }
-
             // 检查是否启用帧生成
             val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
-            val generateFrames = sharedPref.getBoolean("generate_frames", true)
+            val isRemoteUploadMode = sharedPref.getBoolean("remote_upload", false)
 
-            if (generateFrames) {
+            if (isRemoteUploadMode) {
+                // 远程上传模式
+                VideoUploader.uploadVideo(context, file) { success ->
+                    if (success) {
+                        Log.d(TAG, "Video Upload Succeed")
+                    } else {
+                        Log.e(TAG, "Video Upload Failed")
+                    }
+                }
+            } else {
+                // 本地拆帧模式
                 FFmpegFrameExtractor.extractFramesToGallery(
                     context,
                     file
                 ) { frameSuccess, outputDir ->
                     if (frameSuccess) {
-                        Log.d(TAG, "Frames extracted successfully to $outputDir")
+                        Log.d(TAG, "Frame Succeed")
                     } else {
-                        Log.e(TAG, "Frame extraction failed")
+                        Log.e(TAG, "Frame Failed")
                     }
                 }
-            }
 
+            }
         }
 
     }
@@ -171,7 +171,8 @@ class VideoRecorder(
 
     private fun createVideoFile(): File? {
         // 获取公共视频目录[./0/MOVIES]
-        val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+        val storageDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
 
         // 创建ColorCode子目录
         val yzrDir = File(storageDir, "ColorCode")

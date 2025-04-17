@@ -57,26 +57,31 @@
             android:textColor="@android:color/black"/>
     </ScrollView>
 
-    <!-- 帧生成模式开关 -->
-    <LinearLayout
+    <!-- 替换原来的两个开关布局 -->
+    <RadioGroup
+        android:id="@+id/functionModeGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:layout_marginTop="16dp"
-        android:gravity="center_vertical">
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <RadioButton
+            android:id="@+id/localFramesRadio"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/generate_frames_label"
+            android:layout_weight="1"
+            android:text="@string/local_frames_mode"
             android:textSize="16sp"/>
 
-        <Switch
-            android:id="@+id/frameGenerationSwitch"
-            android:layout_width="wrap_content"
+        <RadioButton
+            android:id="@+id/remoteUploadRadio"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"/>
-    </LinearLayout>
+            android:layout_weight="1"
+            android:text="@string/remote_upload_mode"
+            android:textSize="16sp"/>
+    </RadioGroup>
+
 
     <!-- 按钮组 - 两两并排 -->
     <LinearLayout

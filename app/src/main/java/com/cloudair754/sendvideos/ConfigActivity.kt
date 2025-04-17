@@ -40,9 +40,14 @@ class ConfigActivity : AppCompatActivity() {
         binding.urlEditText.setText(savedUrl)
 
 
-        // 加载帧生成设置，默认为true
-        val generateFrames = sharedPref.getBoolean("generate_frames", true)
-        binding.frameGenerationSwitch.isChecked = generateFrames
+        // 读取当前模式（默认本地拆帧）
+        val isRemoteUploadMode = sharedPref.getBoolean("remote_upload", false)
+        if (isRemoteUploadMode) {
+            binding.remoteUploadRadio.isChecked = true
+        } else {
+            binding.localFramesRadio.isChecked = true
+        }
+
 
 
         binding.saveButton.setOnClickListener {
@@ -203,7 +208,7 @@ class ConfigActivity : AppCompatActivity() {
     // 保存设置并返回
     private fun saveSettingsAndReturn() {
         val url = binding.urlEditText.text.toString().trim()
-        val generateFrames = binding.frameGenerationSwitch.isChecked
+        val isRemoteUploadMode = binding.remoteUploadRadio.isChecked
 
         when {
             url.isEmpty() -> binding.urlEditText.error = "URL cannot be empty"
@@ -214,7 +219,8 @@ class ConfigActivity : AppCompatActivity() {
                 // 保存所有设置
                 sharedPref.edit()
                     .putString("upload_url", url)
-                    .putBoolean("generate_frames", generateFrames)
+                    .putBoolean("remote_upload", isRemoteUploadMode)
+                    .putBoolean("generate_frames", !isRemoteUploadMode) // 本地拆帧与远程上传互斥
                     .apply()
 
                 setResult(RESULT_OK)

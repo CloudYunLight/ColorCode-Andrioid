@@ -50,6 +50,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    buildToolsVersion = "35.0.0"
 }
 
 dependencies {
@@ -84,5 +85,6 @@ dependencies {
 
     // https://mvnrepository.com/artifact/com.arthenica/ffmpeg-kit-full
     implementation(libs.ffmpeg.kit.full)
+
 
 }
