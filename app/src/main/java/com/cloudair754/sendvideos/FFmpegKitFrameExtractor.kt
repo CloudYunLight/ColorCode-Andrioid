@@ -132,19 +132,7 @@ object FFmpegFrameExtractor {
 
         return if (fontPath.isNotEmpty()) {
             // 添加带外轮廓的水印（使用shadow效果模拟描边）
-            // TODO 并行优化
-
-            /*
-
-             // 添加硬件解码和线程优化
-    return "-hwaccel auto -threads 4 " +
-           "-i ${videoFile.absolutePath} " +
-           "-vf \"fps=30,scale=w='if(gt(iw,ih),1280,-2)':h='if(gt(iw,ih),-2,720)'\" " + // 限制分辨率
-           "-q:v 2 -preset ultrafast " + // 快速编码预设
-           "-pix_fmt yuv420p " + // 兼容性更好的像素格式
-           File(outputDir, "frame_%04d.jpg").absolutePath // 改用更高效的jpg格式
-
-             */
+            // (不再优化，再如何使用平行方案，比率均为1)
             "-i ${videoFile.absolutePath} " +
                     "-vf \"fps=30," +
                     "drawtext=fontfile=$fontPath:text='$videoName':x=10:y=h-th-40:" +
