@@ -75,7 +75,7 @@ class VideoRecorder(
          *VideoCapture 是 CameraX 提供的用于视频捕获的用例：
          *
          */
-        // TODO 加速？
+
         recording = videoCapture.output
             .prepareRecording(context, fileOutputOptions)
             .start(ContextCompat.getMainExecutor(context)) { event ->
