@@ -116,8 +116,11 @@ object VideoUploader {
             .build()
 
 
+        // OkHttp 架构【同步的请求方法】
         // 异步执行上传请求
         client.newCall(request).enqueue(object : Callback {
+            // 失败回调
+            // 默认超时时间10s
             override fun onFailure(call: Call, e: IOException) {
                 // 上传失败处理
                 Log.e(TAG, "Upload failed to $uploadUrl", e)
@@ -125,6 +128,8 @@ object VideoUploader {
 
                 callback(false)
             }
+
+            // 成功回调（服务器返回响应（无论 HTTP 状态码是 200 还是 404 等））
 
             override fun onResponse(call: Call, response: Response) {
                 try {
