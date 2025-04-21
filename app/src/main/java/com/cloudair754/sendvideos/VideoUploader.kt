@@ -272,14 +272,21 @@ object VideoUploader {
                     AlertDialog.Builder(context)
                         .setTitle("上传成功")
                         .setMessage("任务ID: $id")
-                        .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+                        .setPositiveButton("确定") { dialog, _ ->
+                            dialog.dismiss()
+                            // 开始轮询任务状态
+                            pollTaskStatus(context, id) { success, result ->
+                                if (!success) {
+                                    Log.w(TAG, "[Polling] Task $id polling failed")
+                                }
+                            }
+                        }
                         .create()
                         .show()
                 }
             }
 
-
-            callback(true, taskId)// 返回成功状态和任务ID
+            callback(true, taskId)  // 这里只是通知上传完成
         }
     }
 
@@ -330,4 +337,135 @@ object VideoUploader {
         val uuid = UUID.randomUUID().toString().take(8)
         return "${uuid}.${originalName.substringAfterLast(".")}"
     }
+
+    // 在VideoUploader对象中添加以下方法
+
+    /**
+     * 轮询任务状态（改进版：达到预期结果时自动停止）
+     * @param context 上下文对象
+     * @param taskId 要查询的任务ID
+     * @param interval 轮询间隔（毫秒，默认2秒）
+     * @param maxAttempts 最大尝试次数（默认30次≈1分钟）
+     * @param callback 结果回调（成功时返回结果JSON）
+     */
+    fun pollTaskStatus(
+        context: Context,
+        taskId: String,
+        interval: Long = 2000,
+        maxAttempts: Int = 30,
+        callback: (Boolean, JSONObject?) -> Unit
+    ) {
+        val handler = Handler(Looper.getMainLooper())
+        var attempts = 0
+        var shouldContinue = true // 控制是否继续轮询的标志
+
+        // 内部递归函数实现轮询
+        fun doPoll() {
+            if (!shouldContinue) return // 如果标志为false则停止
+
+            attempts++
+            Log.d(TAG, "[Polling] Checking status for task $taskId (attempt $attempts/$maxAttempts)")
+
+            val statusUrl = getStatusUrl(context) + "/" + taskId
+            val request = Request.Builder()
+                .url(statusUrl)
+                .get()
+                .build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    Log.e(TAG, "[Polling] Failed to check status", e)
+                    if (attempts >= maxAttempts) {
+                        handler.post {
+                            showToast(context, "状态查询失败")
+                            callback(false, null)
+                        }
+                    } else if (shouldContinue) {
+                        handler.postDelayed(::doPoll, interval)
+                    }
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    try {
+                        val body = response.body?.string()
+                        Log.d(TAG, "[Polling] Status response: $body")
+
+                        val json = JSONObject(body)
+                        when (json.getString("status")) {
+                            "completed" -> {
+                                shouldContinue = false // 停止轮询
+                                handler.post {
+                                    showResultDialog(context, json.getJSONObject("result"))
+                                    callback(true, json)
+                                }
+                            }
+                            else -> {
+                                if (attempts >= maxAttempts) {
+                                    handler.post {
+                                        showToast(context, "处理超时，请稍后手动检查")
+                                        callback(false, null)
+                                    }
+                                } else if (shouldContinue) {
+                                    handler.postDelayed(::doPoll, interval)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "[Polling] Error parsing response", e)
+                        handler.post {
+                            showToast(context, "状态解析错误")
+                            callback(false, null)
+                        }
+                    }
+                }
+            })
+        }
+
+        // 开始轮询
+        handler.post(::doPoll)
+
+        // 可选：提供取消轮询的方法
+        /*
+        return object {
+            fun cancel() {
+                shouldContinue = false
+                handler.removeCallbacks(::doPoll)
+            }
+        }
+        */
+    }
+
+    /**
+     * 显示处理结果对话框
+     */
+    private fun showResultDialog(context: Context, result: JSONObject) {
+        val message = buildString {
+            append("视频处理完成！\n\n")
+            append("时长: ${result.optInt("duration")}秒\n")
+            append("大小: ${result.optInt("size")}KB\n")
+            append("URL: ${result.optString("video_url")}\n")
+            append("图片信息：${result.optString("info")}")
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("处理结果")
+            .setMessage(message)
+            .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+            .create()
+            .show()
+    }
+
+    /**
+     * 获取状态检查URL
+     */
+    private fun getStatusUrl(context: Context): String {
+        val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
+        val baseUrl = sharedPref.getString("upload_url", "http://IP:5000") ?: "http://IP:5000"
+        return baseUrl.replace("/upload", "") + "/check_status"
+    }
+
+
+
+
+
 }
