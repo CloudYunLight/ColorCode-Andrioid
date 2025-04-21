@@ -1,26 +1,42 @@
 package com.cloudair754.sendvideos
 
 import android.app.AlertDialog
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
-import java.util.Timer
-import java.util.TimerTask
-import java.util.UUID
-import android.content.Context
-import android.os.Handler
-import android.os.Looper
+import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+
+/**
+ * 网络状态检查器接口
+ */
+//interface NetworkStatusChecker {
+//    enum class NetworkQuality {
+//        GOOD, FAIR, POOR
+//    }
+//
+//    val currentNetworkQuality: NetworkQuality
+//}
 
 /**
  * 视频上传器（单例对象）
  * 功能：
- * 1. 处理视频文件上传到服务器
- * 2. 支持上传进度监控
+ * 1. 分片上传视频文件到服务器（每片20MB）
+ * 2. 支持文件锁定检查
  * 3. 提供上传结果回调
  * 4. 自动生成短文件名
  */
@@ -33,151 +49,225 @@ object VideoUploader {
     }
 
     private const val TAG = "VideoUploader"
-    // 修改OkHttpClient初始化，添加超时设置
+    // 分片大小 (20MB)
+    private const val CHUNK_SIZE = 20 * 1024 * 1024
+    // 最大并发上传数
+    private const val MAX_CONCURRENT_UPLOADS = 3
+    // 文件锁定检查间隔（毫秒）
+    private const val FILE_LOCK_CHECK_INTERVAL = 1500L
+
+    // OkHttpClient配置
     private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS) // 连接超时30秒
-        .readTimeout(60, TimeUnit.SECONDS)    // 读取超时60秒
-        .writeTimeout(60, TimeUnit.SECONDS)   // 写入超时60秒
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     /**
-     * 上传视频文件（公开接口）
+     * 上传视频文件（保持原有调用方式不变）
      * @param context 上下文对象
      * @param file 要上传的视频文件
      * @param callback 上传结果回调（成功/失败）
      */
     fun uploadVideo(context: Context, file: File, callback: (Boolean) -> Unit) {
+        // 转换为新的回调方式但不暴露给外部
+        internalUploadVideo(context, file) { success, _ ->
+            callback(success)
+        }
+    }
 
+    /**
+     * 实际的分片上传实现（内部使用）
+     */
+    private fun internalUploadVideo(
+        context: Context,
+        file: File,
+        callback: (Boolean, String?) -> Unit
+    ) {
         // 检查网络状态
         networkChecker?.let { checker ->
             if (checker.currentNetworkQuality == NetworkStatusChecker.NetworkQuality.POOR) {
+                Log.w(TAG, "[Network] Poor network quality, upload canceled")
                 showToast(context, "网络质量差，已取消上传")
-                callback(false)
+                callback(false, null)
                 return
             }
         }
-        Log.d(TAG, "Attempting to upload file: ${file.name}")
+
+        Log.i(TAG, "[Upload] Preparing to upload file: ${file.name} (${file.length()} bytes)")
         showToast(context, "准备上传视频...")
 
-        // 生成短文件名（用于显示和上传）
-        val shortFileName = generateShortFileName(file.name)
-        Log.d(TAG, "Original: ${file.name}, Short: $shortFileName")
-
         // 使用定时器确保文件可访问（解决文件锁定问题）
-
         val timer = Timer()
         timer.schedule(object : TimerTask() {
             override fun run() {
                 // 检查文件是否可访问
                 if (file.renameTo(file)) {
                     timer.cancel()
-                    performUpload(context, file, callback)// 执行实际上传
+                    Log.d(TAG, "[FileLock] File is now accessible, proceeding with upload")
+
+                    // 生成文件ID和短文件名
+                    val fileId = UUID.randomUUID().toString()
+                    val shortFileName = generateShortFileName(file.name)
+                    Log.d(TAG, "[Upload] Generated file ID: $fileId")
+
+                    // 计算分片数量（修正类型转换）
+                    val totalSize = file.length()
+                    val totalChunks = ((totalSize + CHUNK_SIZE - 1) / CHUNK_SIZE).toInt()
+                    Log.d(TAG, "[Upload] Total chunks: $totalChunks")
+
+                    // 开始分片上传
+                    uploadChunks(context, file, fileId, shortFileName, totalChunks, callback)
+                } else {
+                    Log.d(TAG, "[FileLock] File still locked, waiting...")
                 }
             }
-        }, 1500, 1500)// 延迟1.5秒开始，每1.5秒检查一次
+        }, FILE_LOCK_CHECK_INTERVAL, FILE_LOCK_CHECK_INTERVAL)
     }
 
-    // 添加这个方法获取配置的URL
+    /**
+     * 分片上传核心逻辑
+     */
+    private fun uploadChunks(
+        context: Context,
+        file: File,
+        fileId: String,
+        shortFileName: String,
+        totalChunks: Int,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        val executor = Executors.newFixedThreadPool(MAX_CONCURRENT_UPLOADS)
+        val latch = CountDownLatch(totalChunks)
+        var successCount = AtomicInteger(0)
+        var taskId: String? = null
+        var hasError = AtomicBoolean(false)
+
+        Log.i(TAG, "[Upload] Starting chunk upload with $MAX_CONCURRENT_UPLOADS concurrent threads")
+
+        for (i in 0 until totalChunks) {
+            executor.execute {
+                if (hasError.get()) {
+                    Log.w(TAG, "[Upload] Error detected, skipping chunk $i")
+                    latch.countDown()
+                    return@execute
+                }
+
+                try {
+                    // 读取分片数据
+                    val startPos = i * CHUNK_SIZE.toLong()
+                    val endPos = minOf((i + 1) * CHUNK_SIZE.toLong(), file.length())
+                    val chunkSize = (endPos - startPos).toInt()
+                    Log.d(TAG, "[Upload] Processing chunk $i/$totalChunks (bytes $startPos-$endPos)")
+
+                    val buffer = ByteArray(chunkSize)
+                    FileInputStream(file).use { fis ->
+                        fis.skip(startPos)
+                        fis.read(buffer)
+                    }
+
+                    // 创建临时文件保存分片
+                    val tempFile = File.createTempFile("chunk_$i", ".tmp").apply {
+                        deleteOnExit()
+                    }
+                    FileOutputStream(tempFile).use { fos ->
+                        fos.write(buffer)
+                    }
+                    Log.d(TAG, "[Upload] Chunk $i saved to temp file")
+
+                    // 上传分片
+                    val uploadUrl = getUploadUrl(context)
+                    val mediaType = "video/mp4".toMediaType()
+
+                    val requestBody = MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("file", shortFileName, tempFile.asRequestBody(mediaType))
+                        .addFormDataPart("chunk_number", i.toString())
+                        .addFormDataPart("total_chunks", totalChunks.toString())
+                        .addFormDataPart("file_id", fileId)
+                        .addFormDataPart("original_filename", file.name)
+                        .build()
+
+                    val request = Request.Builder()
+                        .url(uploadUrl)
+                        .post(requestBody)
+                        .addHeader("X-File-Name", shortFileName)
+                        .build()
+
+                    Log.d(TAG, "[Upload] Sending chunk $i to server")
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            Log.e(TAG, "[Upload] Chunk $i upload failed: ${response.code}")
+                            hasError.set(true)
+                            return@use
+                        }
+
+                        val responseBody = response.body?.string()
+                        Log.d(TAG, "[Upload] Chunk $i response: $responseBody")
+
+                        // 如果是最后一个分片，获取任务ID
+                        if (i == totalChunks - 1) {
+                            responseBody?.let {
+                                try {
+                                    val json = JSONObject(it)
+                                    taskId = json.optString("task_id")
+                                    Log.i(TAG, "[Upload] Received task ID: $taskId")
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "[Upload] Failed to parse task ID", e)
+                                }
+                            }
+                        }
+
+                        successCount.incrementAndGet()
+                    }
+
+                    tempFile.delete()
+                } catch (e: Exception) {
+                    Log.e(TAG, "[Upload] Error uploading chunk $i", e)
+                    hasError.set(true)
+                } finally {
+                    latch.countDown()
+                    Log.d(TAG, "[Upload] Chunk $i processing completed")
+                }
+            }
+        }
+
+        // 等待所有分片上传完成
+        executor.shutdown()
+        try {
+            if (!latch.await(5, TimeUnit.MINUTES)) {
+                Log.e(TAG, "[Upload] Upload timeout (5 minutes)")
+                showToast(context, "上传超时")
+                callback(false, null)
+                return
+            }
+        } catch (e: InterruptedException) {
+            Log.e(TAG, "[Upload] Upload interrupted", e)
+            callback(false, null)
+            return
+        }
+
+        if (hasError.get()) {
+            Log.e(TAG, "[Upload] Upload failed with errors. Success chunks: ${successCount.get()}/$totalChunks")
+            showToast(context, "上传失败，部分分片上传出错")
+            callback(false, null)
+        } else {
+            Log.i(TAG, "[Upload] All chunks uploaded successfully. Total: $totalChunks")
+            showToast(context, "视频上传完成")
+            callback(true, taskId)
+        }
+    }
+
+    /**
+     * 获取上传URL（从SharedPreferences）
+     */
     private fun getUploadUrl(context: Context): String {
         val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
         return sharedPref.getString("upload_url", "http://IP:5000/upload")
             ?: "http://IP:5000/upload"
-        // 其实这里的双重保护没什么用，因为我的主机IP频繁变换
     }
-
-    /**
-     * 执行实际上传操作
-     * @param file 要上传的视频文件
-     * @param callback 上传结果回调
-     */
-    // TODO 这里是否可以以分片上传视频
-    private fun performUpload(context: Context, file: File, callback: (Boolean) -> Unit) {
-
-
-        val uploadUrl = getUploadUrl(context) //"http://10.195.152.71:5000/upload"
-        // 使用uploadUrl代替硬编码的URL
-        Log.d(TAG, "Attempting to upload to URL: $uploadUrl")
-
-        // 生成短文件名并设置媒体类型
-        val shortFileName = generateShortFileName(file.name)
-        val mediaType = "video/mp4".toMediaType()
-
-        // 构建多部分表单请求体（适配Flask服务器接收格式）
-        val requestBody = MultipartBody.Builder()  // 关键修复点！！！！
-            .setType(MultipartBody.FORM) // 设置表单类型
-            //添加一个表单数据部分；；表单字段名(name)，通常对应服务器端接收文件的参数名
-            .addFormDataPart(
-                "file", // 表单字段名（对应服务器参数名）
-                shortFileName,// 文件名
-                file.asRequestBody(mediaType)
-            )
-            .build()
-
-
-        // 构建HTTP请求
-        val request = Request.Builder()
-            .url(uploadUrl)
-            .post(requestBody)// POST请求
-            .addHeader("X-File-Name", shortFileName)
-            .build()
-
-
-        // OkHttp 架构【同步的请求方法】
-        // 异步执行上传请求
-        client.newCall(request).enqueue(object : Callback {
-            // 失败回调
-            // 默认超时时间10s
-            override fun onFailure(call: Call, e: IOException) {
-                // 上传失败处理
-                Log.e(TAG, "Upload failed to $uploadUrl", e)
-                showToast(context, "上传失败: ${e.message}")
-
-                callback(false)
-            }
-
-            // 成功回调（服务器返回响应（无论 HTTP 状态码是 200 还是 404 等））
-
-            override fun onResponse(call: Call, response: Response) {
-                try {
-                    // 1. 先获取状态码（无论成功与否都要读取）
-                    val statusCode = response.code
-
-                    // 2. 只调用一次 string() 并存储结果
-                    val responseBody = response.body?.string() ?: "无返回内容"
-
-                    // 3. 打印完整日志（包含状态码和响应体）
-                    Log.i(TAG, "HTTP $statusCode | Response: $responseBody")
-
-                    // 4. 根据状态码处理不同情况
-                    if (response.isSuccessful) {
-                        showToast(context, "上传成功 (HTTP $statusCode)")
-                        showResponseDialog(context, "上传成功", "状态码: $statusCode\n$responseBody")
-                        callback(true)
-                    } else {
-                        // 特殊处理 404
-                        val errorMsg = when (statusCode) {
-                            404 -> "服务器找不到目标地址 (404)\n请检查上传URL是否正确"
-                            else -> "上传失败 (HTTP $statusCode)\n$responseBody"
-                        }
-                        showToast(context, "上传失败: HTTP $statusCode")
-                        showResponseDialog(context, "上传失败", errorMsg)
-                        callback(false)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "处理响应时出错", e)
-                    showToast(context, "网络请求异常: ${e.javaClass.simpleName}")
-                    callback(false)
-                }
-            }
-        })
-    }
-
-
 
     /**
      * 显示服务器响应信息的对话框
-     * @param title 对话框标题
-     * @param message 要显示的消息内容
      */
     private fun showResponseDialog(context: Context, title: String, message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -192,7 +282,6 @@ object VideoUploader {
 
     /**
      * 在主线程显示Toast消息
-     * @param message 要显示的消息内容
      */
     private fun showToast(context: Context, message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -200,10 +289,8 @@ object VideoUploader {
         }
     }
 
-
     /**
      * 生成短文件名（基于UUID）
-     * @param originalName 原始文件名
      * @return 8位UUID + 原始文件扩展名
      */
     fun generateShortFileName(originalName: String): String {
