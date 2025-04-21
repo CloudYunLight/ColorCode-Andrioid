@@ -22,17 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
 
 /**
- * 网络状态检查器接口
- */
-//interface NetworkStatusChecker {
-//    enum class NetworkQuality {
-//        GOOD, FAIR, POOR
-//    }
-//
-//    val currentNetworkQuality: NetworkQuality
-//}
-
-/**
  * 视频上传器（单例对象）
  * 功能：
  * 1. 分片上传视频文件到服务器（每片20MB）
@@ -42,8 +31,8 @@ import java.util.concurrent.CountDownLatch
  */
 object VideoUploader {
 
+    // 网络状态检查器
     private var networkChecker: NetworkStatusChecker? = null
-
     fun setNetworkChecker(checker: NetworkStatusChecker) {
         this.networkChecker = checker
     }
@@ -56,7 +45,7 @@ object VideoUploader {
     // 文件锁定检查间隔（毫秒）
     private const val FILE_LOCK_CHECK_INTERVAL = 1500L
 
-    // OkHttpClient配置
+    // OkHttpClient配置（连接超时30秒，读写超时60秒）
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -78,6 +67,9 @@ object VideoUploader {
 
     /**
      * 实际的分片上传实现（内部使用）
+     * @param context 上下文对象
+     * @param file 要上传的视频文件
+     * @param callback 上传结果回调（返回成功状态和服务器返回的任务ID）
      */
     private fun internalUploadVideo(
         context: Context,
@@ -127,6 +119,12 @@ object VideoUploader {
 
     /**
      * 分片上传核心逻辑
+     * @param context 上下文对象
+     * @param file 要上传的文件
+     * @param fileId 文件唯一标识
+     * @param shortFileName 短文件名
+     * @param totalChunks 总分片数
+     * @param callback 上传结果回调
      */
     private fun uploadChunks(
         context: Context,
@@ -136,16 +134,23 @@ object VideoUploader {
         totalChunks: Int,
         callback: (Boolean, String?) -> Unit
     ) {
+        // 创建固定大小的线程池（控制并发数）
         val executor = Executors.newFixedThreadPool(MAX_CONCURRENT_UPLOADS)
+        // 使用CountDownLatch跟踪所有分片上传完成
         val latch = CountDownLatch(totalChunks)
+        // 成功计数器（原子操作）
         var successCount = AtomicInteger(0)
+        // 服务器返回的任务ID
         var taskId: String? = null
+        // 错误标志（原子操作）
         var hasError = AtomicBoolean(false)
 
         Log.i(TAG, "[Upload] Starting chunk upload with $MAX_CONCURRENT_UPLOADS concurrent threads")
 
+        // 遍历所有分片
         for (i in 0 until totalChunks) {
             executor.execute {
+                // 如果已发生错误，跳过后续分片
                 if (hasError.get()) {
                     Log.w(TAG, "[Upload] Error detected, skipping chunk $i")
                     latch.countDown()
@@ -159,6 +164,7 @@ object VideoUploader {
                     val chunkSize = (endPos - startPos).toInt()
                     Log.d(TAG, "[Upload] Processing chunk $i/$totalChunks (bytes $startPos-$endPos)")
 
+                    // 读取分片数据到缓冲区
                     val buffer = ByteArray(chunkSize)
                     FileInputStream(file).use { fis ->
                         fis.skip(startPos)
@@ -174,7 +180,7 @@ object VideoUploader {
                     }
                     Log.d(TAG, "[Upload] Chunk $i saved to temp file")
 
-                    // 上传分片
+                    // 构建多部分表单请求
                     val uploadUrl = getUploadUrl(context)
                     val mediaType = "video/mp4".toMediaType()
 
@@ -187,6 +193,8 @@ object VideoUploader {
                         .addFormDataPart("original_filename", file.name)
                         .build()
 
+
+                    // 构建HTTP请求
                     val request = Request.Builder()
                         .url(uploadUrl)
                         .post(requestBody)
@@ -194,6 +202,7 @@ object VideoUploader {
                         .build()
 
                     Log.d(TAG, "[Upload] Sending chunk $i to server")
+                    // 执行上传请求
                     client.newCall(request).execute().use { response ->
                         if (!response.isSuccessful) {
                             Log.e(TAG, "[Upload] Chunk $i upload failed: ${response.code}")
@@ -201,6 +210,7 @@ object VideoUploader {
                             return@use
                         }
 
+                        // 解析服务器响应
                         val responseBody = response.body?.string()
                         Log.d(TAG, "[Upload] Chunk $i response: $responseBody")
 
@@ -217,21 +227,22 @@ object VideoUploader {
                             }
                         }
 
-                        successCount.incrementAndGet()
+                        successCount.incrementAndGet() // 增加成功计数
                     }
 
-                    tempFile.delete()
+                    tempFile.delete() // 删除临时文件
                 } catch (e: Exception) {
                     Log.e(TAG, "[Upload] Error uploading chunk $i", e)
-                    hasError.set(true)
+                    hasError.set(true) // 设置错误标志
                 } finally {
-                    latch.countDown()
+                    latch.countDown()// 减少计数
                     Log.d(TAG, "[Upload] Chunk $i processing completed")
                 }
             }
         }
 
         // 等待所有分片上传完成
+        // 关闭线程池并等待所有任务完成（最多等待5分钟）
         executor.shutdown()
         try {
             if (!latch.await(5, TimeUnit.MINUTES)) {
@@ -246,6 +257,7 @@ object VideoUploader {
             return
         }
 
+        // 根据上传结果调用回调
         if (hasError.get()) {
             Log.e(TAG, "[Upload] Upload failed with errors. Success chunks: ${successCount.get()}/$totalChunks")
             showToast(context, "上传失败，部分分片上传出错")
@@ -253,12 +265,14 @@ object VideoUploader {
         } else {
             Log.i(TAG, "[Upload] All chunks uploaded successfully. Total: $totalChunks")
             showToast(context, "视频上传完成")
-            callback(true, taskId)
+            callback(true, taskId)// 返回成功状态和任务ID
         }
     }
 
     /**
-     * 获取上传URL（从SharedPreferences）
+     * 从SharedPreferences获取上传URL
+     * @param context 上下文对象
+     * @return 上传URL（默认为http://IP:5000/upload）
      */
     private fun getUploadUrl(context: Context): String {
         val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
@@ -267,7 +281,10 @@ object VideoUploader {
     }
 
     /**
-     * 显示服务器响应信息的对话框
+     * 显示服务器响应对话框（在主线程）
+     * @param context 上下文对象
+     * @param title 对话框标题
+     * @param message 对话框消息
      */
     private fun showResponseDialog(context: Context, title: String, message: String) {
         Handler(Looper.getMainLooper()).post {
@@ -282,6 +299,8 @@ object VideoUploader {
 
     /**
      * 在主线程显示Toast消息
+     * @param context 上下文对象
+     * @param message 要显示的消息
      */
     private fun showToast(context: Context, message: String) {
         Handler(Looper.getMainLooper()).post {
