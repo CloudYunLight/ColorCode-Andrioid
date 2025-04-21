@@ -265,6 +265,20 @@ object VideoUploader {
         } else {
             Log.i(TAG, "[Upload] All chunks uploaded successfully. Total: $totalChunks")
             showToast(context, "视频上传完成")
+
+            // 显示任务ID弹窗
+            taskId?.let { id ->
+                Handler(Looper.getMainLooper()).post {
+                    AlertDialog.Builder(context)
+                        .setTitle("上传成功")
+                        .setMessage("任务ID: $id")
+                        .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+                        .create()
+                        .show()
+                }
+            }
+
+
             callback(true, taskId)// 返回成功状态和任务ID
         }
     }
