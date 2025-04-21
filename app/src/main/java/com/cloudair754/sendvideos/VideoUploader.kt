@@ -14,6 +14,7 @@ import java.util.UUID
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import java.util.concurrent.TimeUnit
 
 /**
  * 视频上传器（单例对象）
@@ -32,7 +33,12 @@ object VideoUploader {
     }
 
     private const val TAG = "VideoUploader"
-    private val client = OkHttpClient()// OkHttp客户端实例
+    // 修改OkHttpClient初始化，添加超时设置
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS) // 连接超时30秒
+        .readTimeout(60, TimeUnit.SECONDS)    // 读取超时60秒
+        .writeTimeout(60, TimeUnit.SECONDS)   // 写入超时60秒
+        .build()
 
     /**
      * 上传视频文件（公开接口）
