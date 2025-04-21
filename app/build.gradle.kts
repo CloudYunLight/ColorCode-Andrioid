@@ -11,8 +11,11 @@ android {
         applicationId = "com.cloudair754.sendvideos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2     // 2-v1.0.0(2025/04/21)
+        versionName = "1.0.0"
+
+        // Android 系统使用 versionCode 值来防止降级，
+        //  方法是阻止用户安装 versionCode 低于设备上当前所安装版本的 APK。
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -22,7 +25,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true // 代码混淆
+            isDebuggable = false // 取消调试模式
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
