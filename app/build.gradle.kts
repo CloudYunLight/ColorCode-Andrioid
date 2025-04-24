@@ -11,8 +11,8 @@ android {
         applicationId = "com.cloudair754.sendvideos"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2     // 2-v1.0.0(2025/04/21)
-        versionName = "1.0.0"
+        versionCode = 2     // 2-v1.0.0 2-v1.0.1(2025/04/24)
+        versionName = "1.0.1"
 
         // Android 系统使用 versionCode 值来防止降级，
         //  方法是阻止用户安装 versionCode 低于设备上当前所安装版本的 APK。

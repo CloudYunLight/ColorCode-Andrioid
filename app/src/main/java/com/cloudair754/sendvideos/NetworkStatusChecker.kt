@@ -6,6 +6,7 @@ import android.os.Looper
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * 网络状态检查器
@@ -31,13 +32,22 @@ class NetworkStatusChecker(
     var currentNetworkQuality: NetworkQuality = NetworkQuality.POOR
         private set
 
+    private val pingInterval = 500L // 0.5秒
 
     // OkHttp客户端实例
-    private val client = OkHttpClient()
+    //private val client = OkHttpClient()
+
+    // 修改OkHttpClient配置，添加超时设置
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(pingInterval * 2, TimeUnit.MILLISECONDS) // 连接超时
+        .readTimeout(pingInterval * 2, TimeUnit.MILLISECONDS)    // 读取超时
+        .writeTimeout(pingInterval * 2, TimeUnit.MILLISECONDS)   // 写入超时
+        .callTimeout(pingInterval * 2, TimeUnit.MILLISECONDS)    // 整个调用超时
+        .build()
 
     // 主线程Handler，用于UI更新
     private val handler = Handler(Looper.getMainLooper())
-    private val pingInterval = 500L // 0.5秒
+
 
     // 定时检查任务
     private val pingRunnable = object : Runnable {
@@ -60,24 +70,24 @@ class NetworkStatusChecker(
 
 
     /**
-     * 检查网络状态
+     * 检查网络状态（主要检测逻辑）
      * 逻辑流程：
      * 1. 检查是否配置了服务器URL
      * 2. 向服务器发送ping请求
      * 3. 根据响应结果更新状态
      */
     private fun checkNetworkStatus() {
-        val savedUrl = sharedPref.getString("upload_url", "") ?: ""
+        val BaseUrl = sharedPref.getString("Base_url", "") ?: ""
 
 
 
-        if (savedUrl.isEmpty()) {
+        if (BaseUrl.isEmpty()) {
             updateStatus(R.drawable.circle_red, "未设置服务器")
             currentNetworkQuality = NetworkQuality.POOR
             return
         }
 
-        val pingUrl = savedUrl.replace("/upload", "/ping")
+        val pingUrl = "$BaseUrl/ping"
 
         // 创建HTTP请求
         val request = Request.Builder()

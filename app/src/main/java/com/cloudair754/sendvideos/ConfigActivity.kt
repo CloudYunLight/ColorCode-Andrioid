@@ -33,7 +33,7 @@ class ConfigActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         // 加载保存的URL或使用默认值
-        val defaultUrl = "http://IP:5000/upload" // 设置你的默认URL
+        val defaultUrl = "http://IP:5000" // 设置你的默认URL
 
         // 从共享偏好设置中读取已保存的URL，如果没有则使用默认URL
         val savedUrl = sharedPref.getString("upload_url", defaultUrl)
@@ -218,7 +218,7 @@ class ConfigActivity : AppCompatActivity() {
             else -> {
                 // 保存所有设置
                 sharedPref.edit()
-                    .putString("upload_url", url)
+                    .putString("Base_url", url)
                     .putBoolean("remote_upload", isRemoteUploadMode)
                     .putBoolean("generate_frames", !isRemoteUploadMode) // 本地拆帧与远程上传互斥
                     .apply()
