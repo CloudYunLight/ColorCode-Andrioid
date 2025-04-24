@@ -299,8 +299,10 @@ object VideoUploader {
      */
     private fun getUploadUrl(context: Context): String {
         val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
-        return sharedPref.getString("upload_url", "http://IP:5000/upload")
+         val BaseUrl = sharedPref.getString("Base_url", "http://IP:5000/upload")
             ?: "http://IP:5000/upload"
+
+        return "$BaseUrl/upload"
     }
 
     /**
@@ -454,8 +456,8 @@ object VideoUploader {
      */
     private fun getStatusUrl(context: Context): String {
         val sharedPref = context.getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
-        val baseUrl = sharedPref.getString("upload_url", "http://IP:5000") ?: "http://IP:5000"
-        return baseUrl.replace("/upload", "") + "/check_status"
+        val baseUrl = sharedPref.getString("Base_url", "http://IP:5000") ?: "http://IP:5000"
+        return "$baseUrl/check_status"
     }
 
 

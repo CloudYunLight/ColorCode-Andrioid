@@ -67,17 +67,17 @@ class NetworkStatusChecker(
      * 3. 根据响应结果更新状态
      */
     private fun checkNetworkStatus() {
-        val savedUrl = sharedPref.getString("upload_url", "") ?: ""
+        val BaseUrl = sharedPref.getString("Base_url", "") ?: ""
 
 
 
-        if (savedUrl.isEmpty()) {
+        if (BaseUrl.isEmpty()) {
             updateStatus(R.drawable.circle_red, "未设置服务器")
             currentNetworkQuality = NetworkQuality.POOR
             return
         }
 
-        val pingUrl = savedUrl.replace("/upload", "/ping")
+        val pingUrl = "$BaseUrl/ping"
 
         // 创建HTTP请求
         val request = Request.Builder()
