@@ -351,7 +351,7 @@ object VideoUploader {
     fun pollTaskStatus(
         context: Context,
         taskId: String,
-        interval: Long = 2000,
+        interval: Long = 1000,
         maxAttempts: Int = 30,
         callback: (Boolean, JSONObject?) -> Unit
     ) {
@@ -424,15 +424,6 @@ object VideoUploader {
         // 开始轮询
         handler.post(::doPoll)
 
-        // 可选：提供取消轮询的方法
-        /*
-        return object {
-            fun cancel() {
-                shouldContinue = false
-                handler.removeCallbacks(::doPoll)
-            }
-        }
-        */
     }
 
     /**

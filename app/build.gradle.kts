@@ -25,8 +25,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true // 代码混淆
-            isDebuggable = false // 取消调试模式
+            // isMinifyEnabled = true // 代码混淆
+            // isDebuggable = false // 取消调试模式
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
