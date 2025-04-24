@@ -31,6 +31,8 @@ import java.util.concurrent.CountDownLatch
  */
 object VideoUploader {
 
+
+
     // 网络状态检查器
     private var networkChecker: NetworkStatusChecker? = null
     fun setNetworkChecker(checker: NetworkStatusChecker) {
@@ -53,7 +55,7 @@ object VideoUploader {
         .build()
 
     /**
-     * 上传视频文件（保持原有调用方式不变）
+     * 上传视频文件（调用入口）
      * @param context 上下文对象
      * @param file 要上传的视频文件
      * @param callback 上传结果回调（成功/失败）
@@ -272,7 +274,7 @@ object VideoUploader {
                     AlertDialog.Builder(context)
                         .setTitle("上传成功")
                         .setMessage("任务ID: $id")
-                        .setPositiveButton("确定") { dialog, _ ->
+                        .setPositiveButton("开始视频分析") { dialog, _ ->
                             dialog.dismiss()
                             // 开始轮询任务状态
                             pollTaskStatus(context, id) { success, result ->
@@ -351,10 +353,11 @@ object VideoUploader {
     fun pollTaskStatus(
         context: Context,
         taskId: String,
-        interval: Long = 1000,
+        interval: Long = 2000,
         maxAttempts: Int = 30,
         callback: (Boolean, JSONObject?) -> Unit
     ) {
+        // 两秒一次，尝试30次；请检查代码性能，是否能满足60s内出结果……
         val handler = Handler(Looper.getMainLooper())
         var attempts = 0
         var shouldContinue = true // 控制是否继续轮询的标志
@@ -367,6 +370,8 @@ object VideoUploader {
             Log.d(TAG, "[Polling] Checking status for task $taskId (attempt $attempts/$maxAttempts)")
 
             val statusUrl = getStatusUrl(context) + "/" + taskId
+            // 构建状态查询URL
+
             val request = Request.Builder()
                 .url(statusUrl)
                 .get()
@@ -433,8 +438,6 @@ object VideoUploader {
         val message = buildString {
             append("视频处理完成！\n\n")
             append("时长: ${result.optInt("duration")}秒\n")
-            append("大小: ${result.optInt("size")}KB\n")
-            append("URL: ${result.optString("video_url")}\n")
             append("图片信息：${result.optString("info")}")
         }
 
@@ -454,9 +457,6 @@ object VideoUploader {
         val baseUrl = sharedPref.getString("upload_url", "http://IP:5000") ?: "http://IP:5000"
         return baseUrl.replace("/upload", "") + "/check_status"
     }
-
-
-
 
 
 }
