@@ -1,37 +1,42 @@
 <resources>
-    <string name="app_name">三维码识别</string>
-    <string name="upload_server_url_config">更新服务器网址</string>
-    <string name="enter_upload_url_config">输入新网址</string>
-    <string name="version_info_config_placeholder">版本信息</string>
-    <string name="save_config">保存并退出</string>
-    <string name="back_config">不保存退出</string>
+    <string name="app_name">TQRcode</string>
+    <string name="upload_server_url_config">Update server URL</string>
+    <string name="enter_upload_url_config">Enter new website address</string>
+    <string name="version_info_config_placeholder">Version information</string>
+    <string name="save_config">save and exit</string>
+    <string name="back_config">exit without saving</string>
 
-    <string name="clean_files">清理临时视频文件</string>
-    <string name="clean_success">已清理 %d 个文件</string>
-    <string name="clean_failed">清理失败</string>
-    <string name="no_files">没有可清理的文件</string>
-    <string name="clean_permission_denied">权限不足，无法清理文件</string>
+    <string name="clean_files">Clean up temporary video files</string>
+    <string name="clean_success">Cleaned %d files</string>
+    <string name="clean_failed">Cleaning failed</string>
+    <string name="no_files">No files for cleaning</string>
+    <string name="clean_permission_denied">Insufficient permissions to clean files</string>
 
-    <string name="clean_frames">清理所有帧图片</string>
-    <string name="confirm_clean_frames">确定要删除所有生成的帧图片吗？</string>
-    <string name="frames_clean_success">已删除%d个帧图片</string>
-    <string name="no_frames_found">未找到可删除的帧图片</string>
+    <string name="clean_frames">Clean up all frame images</string>
+    <string name="confirm_clean_frames">Sure delete all generated frame images?</string>
+    <string name="frames_clean_success">%d frames of images deleted</string>
+        <string name="no_frames_found">No frame images found for deletion</string>
 
-    <string name="confirm_clean_frames_title"><![CDATA[确认删除所有帧图片？]]></string>
+    <string name="confirm_clean_frames_title"><![CDATA[Are you sure to delete all frame images?]]></string>
     <string name="confirm_clean_frames_message">
-        <![CDATA[<font color="#FF0000">警告：此操作将永久删除所有生成的帧图片，且无法恢复！</font>]]>
+        <![CDATA[<font color="#FF0000">Warning: This operation will permanently delete all generated frame images and cannot be restored!</font>]]>
     </string>
-    <string name="confirm_delete_button"><![CDATA[<font color="#FF0000">我已知悉，永久删除</font>]]></string>
+    <string name="confirm_delete_button"><![CDATA[<font color="#FF0000">DELETE PERMANENTLY</font>]]></string>
 
-    <string name="Btn_record">开始录制</string>
-    <string name="Btn_stop">结束录制</string>
-    <string name="Btn_config">配置</string>
+    <string name="Btn_record">Rec. Begin</string>
+    <string name="Btn_stop">Rec. End</string>
+    <string name="Btn_config">Config</string>
 
-    <string name="ProgressDialogTitle">"正在导出帧图片"</string>
-    <string name="ProgressDialogContext">"请稍候，正在处理视频帧...\n\n!耗时大概为 2.5倍 视频时长!"</string>
+    <string name="ProgressDialogTitle">"Exporting frame images"</string>
+    <string name="ProgressDialogContext">"Please wait, processing video frames ..\n\n! It takes about 2.5 times the video duration!"</string>
 
-    <string name="local_frames_mode">本地拆帧</string>
-    <string name="remote_upload_mode">远程上传</string>
+    <string name="local_frames_mode">Local Split</string>
+    <string name="remote_upload_mode">Remote Upload</string>
+
+    <string name="NetworkDetect_ServerUrlUnset">ServerUrl Unsetted</string>
+    <string name="NetworkDetect_ConnectionFailed">Connection failed</string>
+    <string name="NetworkDetect_ServerException">ServerException</string>
+
 
 
 </resources>

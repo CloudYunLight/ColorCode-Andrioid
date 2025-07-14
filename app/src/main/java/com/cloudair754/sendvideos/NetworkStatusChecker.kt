@@ -82,7 +82,8 @@ class NetworkStatusChecker(
 
 
         if (BaseUrl.isEmpty()) {
-            updateStatus(R.drawable.circle_red, "未设置服务器")
+            updateStatus(R.drawable.circle_red,context.getString(R.string.NetworkDetect_ServerUrlUnset))
+            //updateStatus(R.drawable.circle_red, "未设置服务器")
             currentNetworkQuality = NetworkQuality.POOR
             return
         }
@@ -101,7 +102,8 @@ class NetworkStatusChecker(
             // 请求失败回调
             override fun onFailure(call: Call, e: IOException) {
                 currentNetworkQuality = NetworkQuality.POOR
-                updateStatus(R.drawable.circle_red, "连接失败")
+                updateStatus(R.drawable.circle_red, context.getString(R.string.NetworkDetect_ConnectionFailed))
+                //updateStatus(R.drawable.circle_red, "连接失败")
             }
 
             // 请求成功回调
@@ -120,24 +122,27 @@ class NetworkStatusChecker(
                         }
 
                         when {
-                            status != "alive" -> updateStatus(R.drawable.circle_red, "服务器异常")
+                            status != "alive" -> updateStatus(
+                                R.drawable.circle_red,
+                                context.getString(R.string.NetworkDetect_ServerException))
+                            //status != "alive" -> updateStatus(R.drawable.circle_red, "服务器异常")
                             responseTime > 0.01 -> updateStatus(
                                 R.drawable.circle_yellow,
-                                "延迟较高 ${"%.1f".format(responseTime * 1000)}ms"
+                                "High Delay ${"%.1f".format(responseTime * 1000)}ms"
                             )
 
                             else -> updateStatus(
                                 R.drawable.circle_green,
-                                "连接正常 ${"%.1f".format(responseTime * 1000)}ms"
+                                "Good Connection ${"%.1f".format(responseTime * 1000)}ms"
                             )
                         }
                     } else {
                         currentNetworkQuality = NetworkQuality.POOR
-                        updateStatus(R.drawable.circle_red, "服务器无响应")
+                        updateStatus(R.drawable.circle_red, "Server Unresponsive")
                     }
                 } catch (e: Exception) {
                     currentNetworkQuality = NetworkQuality.POOR
-                    updateStatus(R.drawable.circle_red, "解析错误")
+                    updateStatus(R.drawable.circle_red, "Parse Error")
                 }
             }
         })

@@ -56,7 +56,7 @@ class VideoRecorder(
         // 检查是否正在录制
         if (recording != null) {
             Log.e(TAG, "A recording is already in progress.")
-            Toast.makeText(context, "已有录制正在进行", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Recording is already in progress", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -85,7 +85,7 @@ class VideoRecorder(
                     is VideoRecordEvent.Start -> {
                         Log.d(TAG, "Recording started. File: ${outputFile?.absolutePath}")
                         // 提示用户文件存储位置
-                        showToast("视频已开始录制【startRecording】")
+                        showToast("The video has started recording 【startRecording】")
                     }
 
                     // 录制结束事件
@@ -106,7 +106,7 @@ class VideoRecorder(
 
                             if (outputUri != null) {
                                 //showToast("视频已保存到公共目录：${outputUri}")
-                                showToast("视频已保存到公共目录")
+                                showToast("The video has been saved to the public directory")
 
                             }
                         }
@@ -179,7 +179,7 @@ class VideoRecorder(
         if (!yzrDir.exists()) {
             if (!yzrDir.mkdirs()) {
                 Log.e(TAG, "Failed to create ColorCode directory")
-                showToast("无法创建ColorCode目录")
+                showToast("Unable to create ColorCode directory")
                 return null
             }
         }
@@ -190,7 +190,7 @@ class VideoRecorder(
 
         return File(yzrDir, fileName).also {
             Log.d(TAG, "Video file created: ${it.absolutePath}")
-            showToast("视频文件已创建，存储位置：${it.absolutePath}")
+            showToast("The video file has been created and stored in:${it.absolutePath}")
         }
     }
 

@@ -98,7 +98,7 @@ class ConfigActivity : AppCompatActivity() {
                     ).show()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "清理帧图片失败", e)
+                Log.e(TAG, "Cleaning frame image failed", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@ConfigActivity,
@@ -155,7 +155,7 @@ class ConfigActivity : AppCompatActivity() {
         try {
             resolver.delete(uri, selection, selectionArgs)
         } catch (e: Exception) {
-            Log.e(TAG, "从MediaStore删除失败", e)
+            Log.e(TAG, "Failed to delete from MediaStore", e)
         }
     }
 
@@ -185,7 +185,7 @@ class ConfigActivity : AppCompatActivity() {
                     Log.e(TAG, "权限不足", e)
                     0 to R.string.clean_permission_denied
                 } catch (e: Exception) {
-                    Log.e(TAG, "清理失败", e)
+                    Log.e(TAG, "Cleaning failed", e)
                     0 to R.string.clean_failed
                 }
             }
