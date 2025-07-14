@@ -37,6 +37,8 @@
     <string name="NetworkDetect_ConnectionFailed">Connection failed</string>
     <string name="NetworkDetect_ServerException">ServerException</string>
 
+    <string name="Btn_select_video">Select Video</string>
+
 
 
 </resources>
