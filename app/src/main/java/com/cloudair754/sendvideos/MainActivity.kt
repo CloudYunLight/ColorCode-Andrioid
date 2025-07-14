@@ -2,16 +2,24 @@ package com.cloudair754.sendvideos
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.util.Log
+import android.widget.Button
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.cloudair754.sendvideos.databinding.ActivityMainBinding
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -147,6 +155,94 @@ class MainActivity : AppCompatActivity() {
         binding.zoomSeekBar.progress = 0  // 默认居左
 
 
+
+        // Set up the select video button
+        findViewById<Button>(R.id.selectVideoButton).setOnClickListener {
+            selectVideoFromGallery()
+        }
+
+
+    }
+
+
+    private fun selectVideoFromGallery() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "video/*"
+        }
+        startActivityForResult(intent, REQUEST_CODE_SELECT_VIDEO)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_CODE_SELECT_VIDEO && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { uri ->
+                // Get the file from URI and process it
+                handleSelectedVideo(uri)
+            }
+        }
+    }
+
+    private fun handleSelectedVideo(uri: Uri) {
+        try {
+            // Create a temporary file to store the selected video
+            val inputStream = contentResolver.openInputStream(uri)
+            val fileName = getFileName(uri) ?: "selected_video_${System.currentTimeMillis()}.mp4"
+            val tempFile = File(cacheDir, fileName)
+
+            FileOutputStream(tempFile).use { output ->
+                inputStream?.copyTo(output)
+            }
+
+            // Now process the file similar to how you handle recorded videos
+            val sharedPref = getSharedPreferences("SendVideosPrefs", Context.MODE_PRIVATE)
+            val isRemoteUploadMode = sharedPref.getBoolean("remote_upload", false)
+
+            if (isRemoteUploadMode) {
+                // Remote upload mode
+                VideoUploader.uploadVideo(this, tempFile) { success ->
+                    if (success) {
+                        Log.d(TAG, "Selected video upload succeeded")
+                        // Delete the temp file after successful upload
+                        tempFile.delete()
+                    } else {
+                        Log.e(TAG, "Selected video upload failed")
+                    }
+                }
+            } else {
+                // Local frame extraction mode
+                FFmpegFrameExtractor.extractFramesToGallery(this, tempFile) { frameSuccess, outputDir ->
+                    if (frameSuccess) {
+                        Log.d(TAG, "Frame extraction from selected video succeeded")
+                        // Delete the temp file after successful processing
+                        tempFile.delete()
+                    } else {
+                        Log.e(TAG, "Frame extraction from selected video failed")
+                    }
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling selected video", e)
+            Toast.makeText(this, "Error processing selected video", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        var name: String? = null
+        val cursor = contentResolver.query(uri, null, null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                name = it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        }
+        return name
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val REQUEST_CODE_SELECT_VIDEO = 1001
     }
 
     override fun onResume() {

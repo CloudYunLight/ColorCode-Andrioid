@@ -111,42 +111,60 @@
 
 
 
-    <!-- 按钮容器 -->
-    <LinearLayout
+    <!-- 按钮容器 - 改为GridLayout实现田字格布局 -->
+    <GridLayout
         android:id="@+id/buttonContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
+        android:columnCount="2"
+        android:rowCount="2"
+        android:alignmentMode="alignMargins"
+        android:columnOrderPreserved="false"
         android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 录制按钮 -->
+        <!-- 第一列第一行 - 录制按钮 -->
         <Button
             android:id="@+id/recordButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
             android:text="@string/Btn_record"
-            android:layout_marginEnd="16dp" />
+            android:layout_margin="8dp" />
 
-        <!-- 停止按钮 -->
+        <!-- 第一列第二行 - 停止按钮 -->
         <Button
             android:id="@+id/stopButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
             android:text="@string/Btn_stop"
-            android:layout_marginEnd="16dp"/>
+            android:layout_margin="8dp"/>
 
-        <!-- 配置按钮 -->
+        <!-- 第二列第一行 - 配置按钮 -->
         <Button
             android:id="@+id/configButton"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
             android:text="@string/Btn_config"
-            android:layout_marginEnd="16dp" />
+            android:layout_margin="8dp" />
 
-    </LinearLayout>
+        <!-- 第二列第二行 - 上传视频按钮 -->
+        <Button
+            android:id="@+id/selectVideoButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:text="@string/Btn_select_video"
+            android:layout_margin="8dp" />
+
+    </GridLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

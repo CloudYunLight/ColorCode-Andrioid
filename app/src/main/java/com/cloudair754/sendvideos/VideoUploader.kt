@@ -82,14 +82,14 @@ object VideoUploader {
         networkChecker?.let { checker ->
             if (checker.currentNetworkQuality == NetworkStatusChecker.NetworkQuality.POOR) {
                 Log.w(TAG, "[Network] Poor network quality, upload canceled")
-                showToast(context, "网络质量差，已取消上传")
+                showToast(context, "Poor network quality, upload canceled")
                 callback(false, null)
                 return
             }
         }
 
         Log.i(TAG, "[Upload] Preparing to upload file: ${file.name} (${file.length()} bytes)")
-        showToast(context, "准备上传视频...")
+        showToast(context, "Prepare to upload the video ..")
 
         // 使用定时器确保文件可访问（解决文件锁定问题）
         val timer = Timer()
@@ -249,7 +249,7 @@ object VideoUploader {
         try {
             if (!latch.await(5, TimeUnit.MINUTES)) {
                 Log.e(TAG, "[Upload] Upload timeout (5 minutes)")
-                showToast(context, "上传超时")
+                showToast(context, "Upload timeout")
                 callback(false, null)
                 return
             }
@@ -262,19 +262,19 @@ object VideoUploader {
         // 根据上传结果调用回调
         if (hasError.get()) {
             Log.e(TAG, "[Upload] Upload failed with errors. Success chunks: ${successCount.get()}/$totalChunks")
-            showToast(context, "上传失败，部分分片上传出错")
+            showToast(context, "Upload failed, some fragments were uploaded incorrectly")
             callback(false, null)
         } else {
             Log.i(TAG, "[Upload] All chunks uploaded successfully. Total: $totalChunks")
-            showToast(context, "视频上传完成")
+            showToast(context, "Video upload completed")
 
             // 显示任务ID弹窗
             taskId?.let { id ->
                 Handler(Looper.getMainLooper()).post {
                     AlertDialog.Builder(context)
-                        .setTitle("上传成功")
-                        .setMessage("任务ID: $id")
-                        .setPositiveButton("开始视频分析") { dialog, _ ->
+                        .setTitle("Upload successful")
+                        .setMessage("test ID: $id")
+                        .setPositiveButton("Start video analysis") { dialog, _ ->
                             dialog.dismiss()
                             // 开始轮询任务状态
                             pollTaskStatus(context, id) { success, result ->
@@ -316,7 +316,7 @@ object VideoUploader {
             AlertDialog.Builder(context)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+                .setPositiveButton("Yes") { dialog, _ -> dialog.dismiss() }
                 .create()
                 .show()
         }
@@ -384,7 +384,7 @@ object VideoUploader {
                     Log.e(TAG, "[Polling] Failed to check status", e)
                     if (attempts >= maxAttempts) {
                         handler.post {
-                            showToast(context, "状态查询失败")
+                            showToast(context, "Status query failed")
                             callback(false, null)
                         }
                     } else if (shouldContinue) {
@@ -409,7 +409,7 @@ object VideoUploader {
                             else -> {
                                 if (attempts >= maxAttempts) {
                                     handler.post {
-                                        showToast(context, "处理超时，请稍后手动检查")
+                                        showToast(context, "Processing timeout, please manually check later")
                                         callback(false, null)
                                     }
                                 } else if (shouldContinue) {
@@ -420,7 +420,7 @@ object VideoUploader {
                     } catch (e: Exception) {
                         Log.e(TAG, "[Polling] Error parsing response", e)
                         handler.post {
-                            showToast(context, "状态解析错误")
+                            showToast(context, "State parsing error")
                             callback(false, null)
                         }
                     }
@@ -438,15 +438,15 @@ object VideoUploader {
      */
     private fun showResultDialog(context: Context, result: JSONObject) {
         val message = buildString {
-            append("视频处理完成！\n\n")
-            append("时长: ${result.optInt("duration")}秒\n")
-            append("图片信息：${result.optString("info")}")
+            append("Video processing completed!\n\n")
+            append("Duration ${result.optInt("duration")}秒\n")
+            append("Image information:${result.optString("info")}")
         }
 
         AlertDialog.Builder(context)
-            .setTitle("处理结果")
+            .setTitle("Processing results")
             .setMessage(message)
-            .setPositiveButton("确定") { dialog, _ -> dialog.dismiss() }
+            .setPositiveButton("Yes") { dialog, _ -> dialog.dismiss() }
             .create()
             .show()
     }
