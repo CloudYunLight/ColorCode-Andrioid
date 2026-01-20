@@ -88,7 +88,8 @@ dependencies {
     implementation (libs.androidx.constraintlayout)
 
     // https://mvnrepository.com/artifact/com.arthenica/ffmpeg-kit-full
-    implementation(libs.ffmpeg.kit.full)
+    // implementation(libs.ffmpeg.kit.full)
+    implementation("com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.0.0")
 
 
 }
