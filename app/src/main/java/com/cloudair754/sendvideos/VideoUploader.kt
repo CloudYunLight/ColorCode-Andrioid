@@ -439,8 +439,21 @@ object VideoUploader {
     private fun showResultDialog(context: Context, result: JSONObject) {
         val message = buildString {
             append("Video processing completed!\n\n")
-            append("Duration ${result.optInt("duration")}秒\n")
-            append("Image information:${result.optString("info")}")
+            // append("Duration ${result.optInt("duration")}秒\n")
+            append("Image information:\n")
+            result.optJSONObject("info")?.let { infoJson ->
+                append("  Name: ${infoJson.optString("name")}\n")
+
+                append("===============================")
+                infoJson.optJSONObject("detail")?.let { detailJson ->
+                    append("  Details:\n")
+                    append("    T0:\t ${detailJson.optString("stretch_rate_1")}\n")
+                    append("    T1:\t ${detailJson.optString("stretch_rate_2")}\n")
+                    append("    T2:\t ${detailJson.optString("stretch_rate_3")}\n")
+                }
+                append("===============================")
+                append("  Speed: \t${infoJson.optString("speed")}\n")
+            }
         }
 
         AlertDialog.Builder(context)
