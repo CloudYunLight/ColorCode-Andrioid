@@ -437,11 +437,7 @@ object VideoUploader {
      * 显示处理结果对话框
      */
     private fun showResultDialog(context: Context, result: JSONObject) {
-        val message = buildString {
-            append("Video processing completed!\n\n")
-            append("Duration ${result.optInt("duration")}秒\n")
-            append("Image information:${result.optString("info")}")
-        }
+        val message = formatResultMessage(result)
 
         AlertDialog.Builder(context)
             .setTitle("Processing results")
@@ -449,6 +445,81 @@ object VideoUploader {
             .setPositiveButton("Yes") { dialog, _ -> dialog.dismiss() }
             .create()
             .show()
+    }
+
+    /**
+     * 根据服务端 Images Information 的两种结构生成弹窗文案。
+     *
+     * 初始化结果包含 stages/time_differences；
+     * 使用预设时间的结果包含 name/stretch/preset_time_differences/stretch_speed。
+     * 若连接的是旧服务端，仍会原样显示字符串 info。
+     */
+    internal fun formatResultMessage(result: JSONObject): String = buildString {
+        append("Video processing completed!\n\n")
+        append("Duration: ${result.optString("duration", "--")} s\n\n")
+        append("Images Information\n")
+
+        when (val info = result.opt("info")) {
+            is JSONObject -> when {
+                info.has("stages") -> appendInitializationInformation(info)
+                info.has("stretch") -> appendPresetInformation(info)
+                else -> append(info.toString(2))
+            }
+            null, JSONObject.NULL -> append("No image information returned.")
+            else -> append(info.toString())
+        }
+    }
+
+    private fun StringBuilder.appendInitializationInformation(info: JSONObject) {
+        append("Stage time preset initialized\n\n")
+        append("Stage time points\n")
+
+        val stages = info.optJSONObject("stages")
+        listOf("RGB", "RG", "G").forEach { label ->
+            val stage = stages?.optJSONObject(label)
+            val description = stage?.optString("description")
+                ?.takeIf { it.isNotBlank() }
+                ?: label
+            append("$label ($description): ${formatSeconds(stage?.opt("time"))}\n")
+        }
+
+        append("\nStage time differences\n")
+        appendTimeDifferences(info.optJSONObject("time_differences"))
+    }
+
+    private fun StringBuilder.appendPresetInformation(info: JSONObject) {
+        append("Name: ${info.optString("name", "--")}\n\n")
+        append("Stretch\n")
+
+        val stretch = info.optJSONObject("stretch")
+        listOf("RGB", "RG", "G").forEach { label ->
+            append("$label: ${stretch?.optString(label, "--") ?: "--"}\n")
+        }
+
+        append("\nPreset time differences\n")
+        appendTimeDifferences(info.optJSONObject("preset_time_differences"))
+
+        val speed = info.optJSONObject("stretch_speed")
+        val speedDisplay = speed?.optString("display")
+            ?.takeIf { it.isNotBlank() && it != "null" }
+            ?: "--"
+        append("\nStretch speed: $speedDisplay")
+    }
+
+    private fun StringBuilder.appendTimeDifferences(timeDifferences: JSONObject?) {
+        val unit = timeDifferences?.optString("unit", "s") ?: "s"
+        append("t1: ${formatNumber(timeDifferences?.opt("t1"))} $unit\n")
+        append("t2: ${formatNumber(timeDifferences?.opt("t2"))} $unit\n")
+    }
+
+    private fun formatSeconds(value: Any?): String = "${formatNumber(value)} s"
+
+    private fun formatNumber(value: Any?): String = when (value) {
+        is Number -> String.format(Locale.US, "%.3f", value.toDouble())
+            .trimEnd('0')
+            .trimEnd('.')
+        null, JSONObject.NULL -> "--"
+        else -> value.toString()
     }
 
     /**
